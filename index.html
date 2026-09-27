@@ -1743,6 +1743,7 @@
         font-size: 13.5px;
         color: #333;
         line-height: 1.6;
+        text-align: center;
       }
       #saveDlg .sd-status {
         min-height: 20px;
@@ -1769,6 +1770,12 @@
       }
       #saveDlg footer .sp {
         flex: 1;
+      }
+      #saveDlg footer:has(#sdBack[hidden]) {
+        justify-content: center;
+      }
+      #saveDlg footer:has(#sdBack[hidden]) .sp {
+        display: none;
       }
       #saveDlg button {
         font: inherit;
@@ -2489,10 +2496,8 @@
         caret-color: transparent;
       }
       .cdp-pop {
-        position: absolute;
-        top: calc(100% + 4px);
-        left: 0;
-        z-index: 60;
+        position: fixed;
+        z-index: 9999;
         width: 200px;
         background: #fff;
         border: 1px solid #99a3b0;
@@ -3118,7 +3123,7 @@
       <div class="rd-body">
         <h2 id="rdTitle">Report</h2>
         <div class="rd-range">
-          <label class="rd-field rd-date-field" for="rdFrom">
+          <label class="rd-field rd-date-field">
             <span class="f">From</span>
             <input
               type="text"
@@ -3129,7 +3134,7 @@
               placeholder="তারিখ"
             />
           </label>
-          <label class="rd-field rd-date-field" for="rdTo">
+          <label class="rd-field rd-date-field">
             <span class="f">To</span>
             <input
               type="text"
@@ -3353,6 +3358,7 @@
           const input = $(id);
           if (!input) return;
           const field = input.closest(".rd-field");
+          const mountPoint = input.closest("dialog") || document.body;
           let pop = null;
           let viewDate = new Date();
           const monthNames = [
@@ -3389,6 +3395,24 @@
             pop = null;
             document.removeEventListener("mousedown", onDocClick, true);
             document.removeEventListener("keydown", onKey);
+            window.removeEventListener("resize", reposition);
+            window.removeEventListener("scroll", reposition, true);
+          }
+          function reposition() {
+            if (!pop) return;
+            const rect = input.getBoundingClientRect();
+            const popWidth = 200;
+            let left = rect.left;
+            if (left + popWidth > window.innerWidth - 8) {
+              left = window.innerWidth - popWidth - 8;
+            }
+            if (left < 8) left = 8;
+            let top = rect.bottom + 4;
+            if (top + 260 > window.innerHeight && rect.top > 260) {
+              top = rect.top - 264;
+            }
+            pop.style.left = left + "px";
+            pop.style.top = top + "px";
           }
           function onDocClick(e) {
             if (pop && !pop.contains(e.target) && e.target !== input)
@@ -3468,15 +3492,17 @@
             viewDate = input.value ? parseIso(input.value) : new Date();
             pop = document.createElement("div");
             pop.className = "cdp-pop";
-            field.appendChild(pop);
+            mountPoint.appendChild(pop);
             render();
+            reposition();
             setTimeout(() => {
               document.addEventListener("mousedown", onDocClick, true);
               document.addEventListener("keydown", onKey);
+              window.addEventListener("resize", reposition);
+              window.addEventListener("scroll", reposition, true);
             }, 0);
           }
           input.addEventListener("click", open);
-          input.addEventListener("focus", open);
         }
         initDatePicker("rdFrom");
         initDatePicker("rdTo");
