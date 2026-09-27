@@ -5373,6 +5373,16 @@
             );
             const failed = results.find((result) => result.error);
             const entries = [];
+            // Admin সব IPI-এর ডাটা দেখতে পাবে; non-admin শুধু নিজের IPI No
+            // (যেটা দিয়ে অ্যাপ ওপেন/লগইন করা হয়েছে) দিয়ে সেভ করা এন্ট্রিগুলোই
+            // দেখবে। প্রতিটি এন্ট্রির মালিকের IPI No fields.mpo-এর ভেতরে
+            // "IPI-XXXXXX - নাম" আকারে সেভ থাকে (দেখুন collectEntry/mpoText)।
+            const myIpi = isAdmin ? null : norm($("de_ipi").value.trim());
+            function entryOwnerIpi(entry) {
+              const mpoText = ((entry && entry.fields && entry.fields.mpo) || "").trim();
+              const dash = mpoText.indexOf(" - ");
+              return norm(dash === -1 ? mpoText : mpoText.slice(0, dash));
+            }
             results.forEach(({ date, docs }) => {
               if (!docs) return;
               docs.forEach(({ id, data }) => {
@@ -5381,6 +5391,7 @@
                   // Summary টেবিলে দেখানো হয় না (raw/"Generate" মোডে সব
                   // এন্ট্রিই দেখা যাবে, যেমন আগে ছিল)।
                   if (reportMode === "summary" && data.posted) return;
+                  if (myIpi && entryOwnerIpi(data) !== myIpi) return;
                   entries.push({ date, key: id, entry: data });
                 }
               });
