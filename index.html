@@ -2068,6 +2068,21 @@
         font: inherit;
         font-size: 14px;
         cursor: pointer;
+        transition:
+          background-color 0.15s ease,
+          color 0.15s ease,
+          border-color 0.15s ease;
+      }
+      #reportDlg footer #rdClose {
+        background: #d9363e;
+        border-color: #d9363e;
+        color: #fff;
+      }
+      #reportDlg footer #rdClose:hover,
+      #reportDlg footer #rdClose:focus-visible {
+        background: #b8272e;
+        border-color: #b8272e;
+        color: #fff;
       }
       #chemistSuggestions {
         display: none;
@@ -2124,6 +2139,69 @@
         overflow: hidden;
         font-size: 12.5px;
         font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #adminEmpSuggestions {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        top: 0;
+        left: 0;
+        width: 100%;
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid #aab4c0;
+        border-radius: 5px;
+        background: #fff;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.18);
+      }
+      #adminEmpSuggestions.show {
+        display: block;
+      }
+      .admin-emp-suggestion {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: stretch;
+        width: 100%;
+        padding: 8px 10px;
+        border: 0;
+        border-bottom: 1px solid #e3e7eb;
+        background: #fff;
+        color: #111;
+        text-align: left;
+        cursor: pointer;
+      }
+      .admin-emp-suggestion:last-child {
+        border-bottom: 0;
+      }
+      #entry .admin-emp-suggestion:hover,
+      #entry .admin-emp-suggestion:focus-visible,
+      #entry .admin-emp-suggestion.active {
+        background: #d7e8ff;
+        color: #0f356f;
+        outline: 0;
+        box-shadow: inset 4px 0 0 #1a3f7a;
+      }
+      .admin-emp-suggestion .aes-ipi {
+        font-size: 11px;
+        font-weight: 700;
+        color: #1a3f7a;
+        letter-spacing: 0.3px;
+      }
+      .admin-emp-suggestion .aes-name {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 12.5px;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .admin-emp-suggestion .aes-terr {
+        color: #555;
+        font-size: 11px;
+        overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -2834,9 +2912,14 @@
                   type="text"
                   id="de_adminChemistIpi"
                   autocomplete="off"
-                  placeholder="IPI-007048"
+                  placeholder="Name / IPI No / Territory Code"
                   spellcheck="false"
                 />
+                <div
+                  id="adminEmpSuggestions"
+                  role="listbox"
+                  aria-label="Employee suggestions"
+                ></div>
                 <div
                   class="ipiStatus"
                   id="adminChemistIpiStatus"
@@ -5301,6 +5384,22 @@
         };
 
         function openEntryInNewTab(date, key) {
+          // Summary মোডে (rdSummaryBtn চাপার পর) রো-এর "View" চাপলে যেন
+          // Generate/raw মোডের মতো Saved Form না দেখিয়ে, Summary Form
+          // ফরম্যাটেই (একটামাত্র এন্ট্রি নিয়ে) খোলে — তাই এখানে
+          // summaryPrint=1 ফ্লো-টাই পুনরায় ব্যবহার করা হচ্ছে।
+          if (reportMode === "summary") {
+            try {
+              sessionStorage.setItem(
+                "summaryPrintEntries",
+                JSON.stringify([{ date: isoDateStr(date), key }]),
+              );
+            } catch (e) {}
+            const summaryUrl = new URL(location.href);
+            summaryUrl.search = "?summaryPrint=1";
+            window.open(summaryUrl.href, "_blank");
+            return;
+          }
           const url = new URL(location.href);
           url.search = "";
           url.searchParams.set("viewDate", isoDateStr(date));
@@ -5692,6 +5791,15 @@
             $("chemistSuggestions").classList.remove("show");
           }
         });
+        document.addEventListener("click", (event) => {
+          if (
+            event.target.id !== "de_adminChemistIpi" &&
+            !event.target.closest("#adminEmpSuggestions")
+          ) {
+            $("adminEmpSuggestions").replaceChildren();
+            $("adminEmpSuggestions").classList.remove("show");
+          }
+        });
         $("draftBtn").onclick = restoreDraftClick;
         $("chemistOk").onclick = () => {
           if (!revealProductList()) return;
@@ -5719,12 +5827,13 @@
           panelObserver.disconnect();
           dlg
             .querySelectorAll(
-              "#chemistSuggestions, .product-suggestions, .date-suggestions",
+              "#chemistSuggestions, #adminEmpSuggestions, .product-suggestions, .date-suggestions",
             )
             .forEach((panel) => {
               const isChemist = panel.id === "chemistSuggestions";
+              const isAdminEmp = panel.id === "adminEmpSuggestions";
               if (
-                isChemist
+                isChemist || isAdminEmp
                   ? !panel.classList.contains("show")
                   : panel.style.display !== "block"
               )
@@ -5732,16 +5841,18 @@
               const isProduct = panel.classList.contains("product-suggestions");
               const anchor = isChemist
                 ? $("de_ccode").closest(".search-field")
-                : isProduct
-                  ? panel._anchorInput ||
-                    panel.closest(".pl")?.querySelector("input")
-                  : panel.parentElement.querySelector("input");
+                : isAdminEmp
+                  ? $("de_adminChemistIpi")
+                  : isProduct
+                    ? panel._anchorInput ||
+                      panel.closest(".pl")?.querySelector("input")
+                    : panel.parentElement.querySelector("input");
               if (!anchor) return;
               const r = anchor.getBoundingClientRect();
               const vh = window.innerHeight;
               const below = vh - r.bottom - 10;
               const above = r.top - 10;
-              const want = isChemist ? 240 : isProduct ? 220 : 180;
+              const want = isChemist ? 240 : isProduct ? 220 : isAdminEmp ? 220 : 180;
               const openUp = below < Math.min(want, 140) && above > below;
               const space = Math.max(80, openUp ? above : below);
               const left = Math.max(4, r.left);
@@ -7003,6 +7114,153 @@
           adminChemistLookup();
         });
 
+        // ---- Admin-এর "Entry-এর জন্য MPO-এর IPI No" ঘরে Name / IPI NO /
+        // Territory Code যেকোনো একটা টাইপ করলে সাজেশন দেখানো হয়। শুধু
+        // EMPLOYEE_STATUS "ACTIVE" থাকা রেকর্ডগুলোই দেখানো হয়। প্রতিটা
+        // সাজেশনে ওপরে IPI NO, তার নিচে NAME, তার নিচে Territory Name
+        // থাকে। ক্লিক করলে সেই MPO-এর IPI No বসিয়ে সরাসরি lookup চালানো হয়
+        // (adminChemistLookup) — বাকি তথ্য (Name/AM/Territory) সেখান
+        // থেকেই ভরে যাবে।
+        function renderAdminEmpSuggestions(records, query) {
+          const panel = $("adminEmpSuggestions");
+          const q = (query || "").trim().toUpperCase();
+          if (!records || !q) {
+            panel.replaceChildren();
+            panel.classList.remove("show");
+            return;
+          }
+          const matches = Object.keys(records)
+            .map((k) => records[k])
+            .filter((o) => o && typeof o === "object")
+            .filter(
+              (o) =>
+                pickAny(o, ["EMPLOYEE STATUS", "EMPLOYEESTATUS"])
+                  .trim()
+                  .toUpperCase() === "ACTIVE",
+            )
+            .filter((o) => {
+              const ipi = pick(o, "IPI NO").toUpperCase();
+              const name = pick(o, "NAME").toUpperCase();
+              const terrCode = pick(o, "TERRITORY CODE").toUpperCase();
+              return (
+                ipi.includes(q) || name.includes(q) || terrCode.includes(q)
+              );
+            })
+            .slice(0, 24);
+          panel.replaceChildren(
+            ...matches.map((rec) => {
+              const button = document.createElement("button");
+              button.type = "button";
+              button.className = "admin-emp-suggestion";
+              button.setAttribute("role", "option");
+              button.setAttribute("aria-selected", "false");
+              button.addEventListener("mousedown", (event) =>
+                event.preventDefault(),
+              );
+              const ipiEl = document.createElement("span");
+              ipiEl.className = "aes-ipi";
+              ipiEl.textContent = pick(rec, "IPI NO") || "-";
+              const nameEl = document.createElement("span");
+              nameEl.className = "aes-name";
+              nameEl.textContent = pick(rec, "NAME") || "-";
+              const terrEl = document.createElement("span");
+              terrEl.className = "aes-terr";
+              terrEl.textContent = pick(rec, "TERRITORY NAME") || "-";
+              button.append(ipiEl, nameEl, terrEl);
+              button.addEventListener("click", () => {
+                const ipiVal = pick(rec, "IPI NO");
+                panel.replaceChildren();
+                panel.classList.remove("show");
+                adminChemistResolved = null;
+                $("de_adminChemistIpi").value = ipiVal;
+                clearTimeout(adminChemistTimer);
+                adminChemistLookup();
+              });
+              return button;
+            }),
+          );
+          panel._activeIndex = -1;
+          panel.classList.toggle("show", matches.length > 0);
+          if (matches.length) placePanels();
+        }
+        let adminEmpSuggestTimer = null;
+        let adminEmpSuggestSeq = 0;
+        async function scheduleAdminEmpSuggestions() {
+          clearTimeout(adminEmpSuggestTimer);
+          const panel = $("adminEmpSuggestions");
+          const query = ($("de_adminChemistIpi").value || "").trim();
+          if (
+            !query ||
+            query.length < 2 ||
+            (adminChemistResolved && query === adminChemistResolved.label)
+          ) {
+            panel.replaceChildren();
+            panel.classList.remove("show");
+            return;
+          }
+          const request = ++adminEmpSuggestSeq;
+          try {
+            if (!allCache) {
+              allCache = await getJSON(FB_DB + "/" + FB_PATH + ".json");
+            }
+            if (
+              request !== adminEmpSuggestSeq ||
+              query !== $("de_adminChemistIpi").value.trim()
+            )
+              return;
+            renderAdminEmpSuggestions(allCache, query);
+          } catch (error) {
+            if (request !== adminEmpSuggestSeq) return;
+            panel.replaceChildren();
+            panel.classList.remove("show");
+          }
+        }
+        $("de_adminChemistIpi").addEventListener(
+          "input",
+          scheduleAdminEmpSuggestions,
+        );
+        $("de_adminChemistIpi").addEventListener(
+          "focus",
+          scheduleAdminEmpSuggestions,
+        );
+        $("de_adminChemistIpi").addEventListener("keydown", (event) => {
+          const panel = $("adminEmpSuggestions");
+          if (!panel.classList.contains("show")) return;
+          const items = Array.from(panel.children);
+          if (!items.length) return;
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            event.stopPropagation();
+            let index = panel._activeIndex ?? -1;
+            index =
+              index < 0
+                ? event.key === "ArrowDown"
+                  ? 0
+                  : items.length - 1
+                : event.key === "ArrowDown"
+                  ? Math.min(index + 1, items.length - 1)
+                  : Math.max(index - 1, 0);
+            panel._activeIndex = index;
+            items.forEach((item, itemIndex) => {
+              const active = itemIndex === index;
+              item.classList.toggle("active", active);
+              item.setAttribute("aria-selected", String(active));
+            });
+            items[index].scrollIntoView({ block: "nearest" });
+          } else if (event.key === "Enter") {
+            const storedIndex = panel._activeIndex ?? -1;
+            const index = storedIndex > -1 ? storedIndex : 0;
+            if (items[index]) {
+              event.preventDefault();
+              event.stopPropagation();
+              items[index].click();
+            }
+          } else if (event.key === "Escape") {
+            panel.replaceChildren();
+            panel.classList.remove("show");
+          }
+        });
+
         $("de_ipi").addEventListener("input", () => {
           clearTimeout(timer);
           seq += 1;
@@ -7114,6 +7372,11 @@
             stack.lastElementChild?.classList.add("saved-last");
             document.documentElement.classList.add("two-pages");
             document.body.appendChild(stack);
+            // মোবাইলে A4 সাইজে (স্কেল করে) ঠিকভাবে দেখানোর জন্য — এই
+            // .page গুলো showPage() এর মাধ্যমে নয়, সরাসরি body-তে
+            // appendChild করা হয়েছে, তাই আগের fitPagesToScreen() (লোডের
+            // সময় চলা) এদের ধরতে পারেনি, এখানে আবার চালাতে হচ্ছে।
+            if (window.fitPagesToScreen) window.fitPagesToScreen();
             $("viewFormPrint").hidden = false;
             $("backToReport").hidden = true;
           })();
@@ -7176,6 +7439,10 @@
             stack.lastElementChild?.classList.add("saved-last");
             document.documentElement.classList.add("two-pages");
             document.body.appendChild(stack);
+            // মোবাইলে A4 সাইজে (স্কেল করে) ঠিকভাবে দেখানোর জন্য — উপরের
+            // allPrint ব্লকের মতোই, এখানেও পেজগুলো appendChild-এর পরে আবার
+            // fitPagesToScreen() চালাতে হচ্ছে।
+            if (window.fitPagesToScreen) window.fitPagesToScreen();
             $("viewFormPrint").hidden = false;
             $("backToReport").hidden = true;
             const postBtn = $("summaryPostBtn");
@@ -7428,7 +7695,7 @@
             if (vw < naturalWidth) {
               var scale = vw / naturalWidth;
               var naturalHeight = page.offsetHeight;
-              page.style.transformOrigin = "top center";
+              page.style.transformOrigin = "top left";
               page.style.transform = "scale(" + scale + ")";
               var savedExtra = naturalHeight * (1 - scale);
               page.style.marginBottom = -savedExtra + 16 + "px";
@@ -7440,6 +7707,18 @@
         window.addEventListener("resize", fitPagesToScreen);
         window.addEventListener("orientationchange", fitPagesToScreen);
         window.addEventListener("afterprint", fitPagesToScreen);
+        // মোবাইলে স্ক্রিনে ছোট করে (scale) দেখানো transform-টা প্রিন্ট শুরুর
+        // ঠিক আগে সরিয়ে দেওয়া হয়, যাতে প্রিন্ট সবসময় আসল A4 সাইজেই হয়
+        // (স্ক্রিনের ছোট স্কেল কখনো প্রিন্টে মিশে না যায়); প্রিন্ট শেষে
+        // afterprint আবার আগের মতো স্ক্রিনে ছোট করে দেখাবে।
+        function resetPagesForPrint() {
+          document.querySelectorAll(".page").forEach(function (page) {
+            page.style.transform = "";
+            page.style.transformOrigin = "";
+            page.style.marginBottom = "";
+          });
+        }
+        window.addEventListener("beforeprint", resetPagesForPrint);
       })();
     </script>
   </body>
