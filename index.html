@@ -1023,6 +1023,30 @@
       #entry .chemist-summary + h3.sec {
         margin-top: 8px;
       }
+      #entry .row-nav-bar {
+        display: none;
+      }
+      #entry .row-nav-btn {
+        font-size: 17px;
+        line-height: 1;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 6px 10px;
+        border-radius: 22px;
+        border: 1px solid #1a3f7a;
+        background: #eef2f8;
+        color: #1a3f7a;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      }
+      #entry .row-nav-btn:active {
+        background: #1a3f7a;
+        color: #fff;
+      }
+      #entry .row-nav-btn:focus-visible {
+        outline: 3px solid #06c;
+        outline-offset: 2px;
+      }
       #entry .pl {
         display: grid;
         grid-template-columns: 34px 1fr 1fr 1fr 1fr 1.1fr 34px;
@@ -1397,6 +1421,17 @@
         }
         #entry #chemistSummary {
           order: 6;
+        }
+        #entry .row-nav-bar {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          position: fixed;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          margin: 0;
+          z-index: 50;
         }
         #entry .addbar {
           order: 7;
@@ -3028,6 +3063,31 @@
             <span
               ><strong>Address:</strong> <span id="summaryAddress"></span
             ></span>
+          </div>
+          <div
+            id="rowNavBar"
+            class="row-nav-bar post-search-hidden product-list-group"
+            role="group"
+            aria-label="ঘর পরিবর্তনের বাটন"
+          >
+            <button
+              type="button"
+              id="focusDownBtn"
+              class="row-nav-btn"
+              title="নিচের সারির একই ঘরে যান (Arrow Down)"
+              aria-label="নিচে যান"
+            >
+              ▼
+            </button>
+            <button
+              type="button"
+              id="focusRightBtn"
+              class="row-nav-btn"
+              title="পরের ঘরে যান: Batch → Mfg → Exp → Qty → Value (Arrow Right)"
+              aria-label="পরের ঘরে যান"
+            >
+              ▶
+            </button>
           </div>
           <div class="product-type-bar post-search-hidden product-list-group">
             <label for="typeProduct">Type Product</label>
@@ -7768,6 +7828,113 @@
           });
         }
         window.addEventListener("beforeprint", resetPagesForPrint);
+      })();
+    </script>
+    <script>
+      /* ঘর পরিবর্তনের বাটন (▼ নিচে, ▶ পরের ঘর): প্রতিটি প্রোডাক্ট সারির
+         মধ্যে Batch → Mfg → Exp → Qty → Value ক্রমে ফোকাস সরায়, এবং ▼
+         একই কলামে পরের সারিতে ফোকাস নেয়। কীবোর্ডের Arrow Down/Right চাপলেও
+         একই কাজ হয় (নিজস্ব সাজেশন-বক্স খোলা থাকলে সেটির ↑/↓ হ্যান্ডলিং-এ
+         হস্তক্ষেপ করে না)। */
+      (function () {
+        const downBtn = document.getElementById("focusDownBtn");
+        const rightBtn = document.getElementById("focusRightBtn");
+        const rows = document.getElementById("deRows");
+        if (!downBtn || !rightBtn || !rows) return;
+
+        const FIELD_CLASSES = [
+          "batch-no",
+          "mfg-date",
+          "exp-date",
+          "quantity",
+          "inv",
+        ];
+
+        function currentField() {
+          const active = document.activeElement;
+          if (!active || !rows.contains(active)) return null;
+          const row = active.closest(".pl");
+          if (!row) return null;
+          const idx = FIELD_CLASSES.findIndex(
+            (cls) => active.classList && active.classList.contains(cls),
+          );
+          if (idx === -1) return null;
+          return { input: active, row: row, idx: idx };
+        }
+
+        function firstField() {
+          const firstRow = rows.querySelector(".pl");
+          if (!firstRow) return null;
+          return firstRow.querySelector("." + FIELD_CLASSES[0]);
+        }
+
+        function moveRight() {
+          const cur = currentField();
+          if (!cur) {
+            const first = firstField();
+            if (first) first.focus();
+            return;
+          }
+          if (cur.idx >= FIELD_CLASSES.length - 1) return;
+          const next = cur.row.querySelector(
+            "." + FIELD_CLASSES[cur.idx + 1],
+          );
+          if (next) next.focus();
+        }
+
+        function moveDown() {
+          const cur = currentField();
+          if (!cur) {
+            const first = firstField();
+            if (first) first.focus();
+            return;
+          }
+          const nextRow = cur.row.nextElementSibling;
+          if (!nextRow || !nextRow.classList.contains("pl")) return;
+          const sameField = nextRow.querySelector(
+            "." + FIELD_CLASSES[cur.idx],
+          );
+          if (sameField) sameField.focus();
+        }
+
+        // বাটনে ট্যাপ করলে ইনপুট থেকে ফোকাস যেন আগেই সরে না যায়
+        [downBtn, rightBtn].forEach(function (btn) {
+          btn.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+          });
+        });
+        downBtn.addEventListener("click", moveDown);
+        rightBtn.addEventListener("click", moveRight);
+
+        rows.addEventListener("keydown", function (e) {
+          if (e.key !== "ArrowDown" && e.key !== "ArrowRight") return;
+          const target = e.target;
+          if (!target.classList) return;
+          const idx = FIELD_CLASSES.findIndex((cls) =>
+            target.classList.contains(cls),
+          );
+          if (idx === -1) return;
+          // Mfg/Exp-এর নিজস্ব সাজেশন-বক্স খোলা থাকলে তার ↑/↓ হ্যান্ডলিং
+          // আগেই ইভেন্ট থামিয়ে দেয় (stopPropagation), তাই এখানে সাধারণত
+          // পৌঁছায় না; এই চেকটি অতিরিক্ত সতর্কতা হিসেবে রাখা হলো।
+          const dateField = target.closest(".date-suggest-field");
+          if (dateField) {
+            const panel = dateField.querySelector(".date-suggestions");
+            if (panel && panel.style.display === "block") return;
+          }
+          if (e.key === "ArrowRight") {
+            const atEnd =
+              typeof target.selectionStart === "number" &&
+              target.selectionStart === target.value.length &&
+              target.selectionEnd === target.value.length;
+            if (!atEnd) return; // কার্সার লেখার মাঝে থাকলে স্বাভাবিক আচরণ
+            e.preventDefault();
+            moveRight();
+          } else {
+            e.preventDefault();
+            moveDown();
+          }
+        });
       })();
     </script>
   </body>
