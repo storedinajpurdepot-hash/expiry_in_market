@@ -3068,25 +3068,16 @@
             id="rowNavBar"
             class="row-nav-bar post-search-hidden product-list-group"
             role="group"
-            aria-label="ঘর পরিবর্তনের বাটন"
+            aria-label="পরের ঘরে যাওয়ার বাটন"
           >
             <button
               type="button"
               id="focusDownBtn"
               class="row-nav-btn"
-              title="নিচের সারির একই ঘরে যান (Arrow Down)"
-              aria-label="নিচে যান"
-            >
-              ▼
-            </button>
-            <button
-              type="button"
-              id="focusRightBtn"
-              class="row-nav-btn"
-              title="পরের ঘরে যান: Batch → Mfg → Exp → Qty → Value (Arrow Right)"
+              title="পরের ঘরে/সাজেশনে যান: Batch → Mfg → Exp → Qty → Value → পরের সারি (Arrow Down)"
               aria-label="পরের ঘরে যান"
             >
-              ▶
+              ▼
             </button>
           </div>
           <div class="product-type-bar post-search-hidden product-list-group">
@@ -7831,16 +7822,16 @@
       })();
     </script>
     <script>
-      /* ঘর পরিবর্তনের বাটন (▼ নিচে, ▶ পরের ঘর): প্রতিটি প্রোডাক্ট সারির
-         মধ্যে Batch → Mfg → Exp → Qty → Value ক্রমে ফোকাস সরায়, এবং ▼
-         একই কলামে পরের সারিতে ফোকাস নেয়। কীবোর্ডের Arrow Down/Right চাপলেও
-         একই কাজ হয় (নিজস্ব সাজেশন-বক্স খোলা থাকলে সেটির ↑/↓ হ্যান্ডলিং-এ
-         হস্তক্ষেপ করে না)। */
+      /* ▼ বাটন / কীবোর্ডের Arrow Down: প্রতিটি প্রোডাক্ট সারির মধ্যে
+         Batch → Mfg → Exp → Qty → Value ক্রমে ফোকাস এগিয়ে নেয়, Value-এর
+         পর পরের সারির Batch-এ চলে যায়। Mfg/Exp ঘরে নিজস্ব তারিখ-সাজেশন
+         (dropdown) খোলা থাকলে সেটির নিজস্ব ↑/↓ হ্যান্ডলিং কাজ করে (এই
+         স্ক্রিপ্ট তখন হস্তক্ষেপ করে না), তাই Arrow Down দিয়ে সাজেশনেও
+         যাওয়া যায়। */
       (function () {
         const downBtn = document.getElementById("focusDownBtn");
-        const rightBtn = document.getElementById("focusRightBtn");
         const rows = document.getElementById("deRows");
-        if (!downBtn || !rightBtn || !rows) return;
+        if (!downBtn || !rows) return;
 
         const FIELD_CLASSES = [
           "batch-no",
@@ -7868,46 +7859,38 @@
           return firstRow.querySelector("." + FIELD_CLASSES[0]);
         }
 
-        function moveRight() {
+        // Batch → Mfg → Exp → Qty → Value; Value-তে থাকলে পরের সারির
+        // Batch-এ যায় (পরের সারি থাকলে)।
+        function advance() {
           const cur = currentField();
           if (!cur) {
             const first = firstField();
             if (first) first.focus();
             return;
           }
-          if (cur.idx >= FIELD_CLASSES.length - 1) return;
-          const next = cur.row.querySelector(
-            "." + FIELD_CLASSES[cur.idx + 1],
-          );
-          if (next) next.focus();
-        }
-
-        function moveDown() {
-          const cur = currentField();
-          if (!cur) {
-            const first = firstField();
-            if (first) first.focus();
+          if (cur.idx < FIELD_CLASSES.length - 1) {
+            const next = cur.row.querySelector(
+              "." + FIELD_CLASSES[cur.idx + 1],
+            );
+            if (next) next.focus();
             return;
           }
           const nextRow = cur.row.nextElementSibling;
           if (!nextRow || !nextRow.classList.contains("pl")) return;
-          const sameField = nextRow.querySelector(
-            "." + FIELD_CLASSES[cur.idx],
+          const firstOfNextRow = nextRow.querySelector(
+            "." + FIELD_CLASSES[0],
           );
-          if (sameField) sameField.focus();
+          if (firstOfNextRow) firstOfNextRow.focus();
         }
 
         // বাটনে ট্যাপ করলে ইনপুট থেকে ফোকাস যেন আগেই সরে না যায়
-        [downBtn, rightBtn].forEach(function (btn) {
-          btn.addEventListener("mousedown", function (e) {
-            e.preventDefault();
-          });
+        downBtn.addEventListener("mousedown", function (e) {
+          e.preventDefault();
         });
-        downBtn.addEventListener("click", moveDown);
-        rightBtn.addEventListener("click", moveRight);
+        downBtn.addEventListener("click", advance);
 
         rows.addEventListener("keydown", function (e) {
-          if (e.key !== "ArrowDown" && e.key !== "ArrowRight") return;
+          if (e.key !== "ArrowDown") return;
           const target = e.target;
           if (!target.classList) return;
           const idx = FIELD_CLASSES.findIndex((cls) =>
@@ -7922,18 +7905,8 @@
             const panel = dateField.querySelector(".date-suggestions");
             if (panel && panel.style.display === "block") return;
           }
-          if (e.key === "ArrowRight") {
-            const atEnd =
-              typeof target.selectionStart === "number" &&
-              target.selectionStart === target.value.length &&
-              target.selectionEnd === target.value.length;
-            if (!atEnd) return; // কার্সার লেখার মাঝে থাকলে স্বাভাবিক আচরণ
-            e.preventDefault();
-            moveRight();
-          } else {
-            e.preventDefault();
-            moveDown();
-          }
+          e.preventDefault();
+          advance();
         });
       })();
     </script>
