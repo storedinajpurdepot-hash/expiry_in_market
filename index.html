@@ -372,6 +372,17 @@
           transform: rotate(360deg);
         }
       }
+      .inline-spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: 6px;
+        vertical-align: -2px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: search-spin 0.7s linear infinite;
+      }
       #deRows .pl {
         position: relative;
       }
@@ -1750,6 +1761,10 @@
         margin: 10px 0 0;
         font-size: 13px;
         color: #666;
+      }
+      #saveDlg .sd-status.busy {
+        color: #1a3f7a;
+        font-weight: 600;
       }
       #saveDlg .sd-status.ok {
         color: #1b7a3a;
@@ -4758,8 +4773,14 @@
         window.addEventListener("pagehide", saveDraft);
 
         function setSdStatus(cls, txt) {
-          $("sdStatus").className = "sd-status " + cls;
-          $("sdStatus").textContent = txt;
+          const statusEl = $("sdStatus");
+          statusEl.className = "sd-status " + cls;
+          if (cls === "busy" && txt) {
+            statusEl.innerHTML =
+              '<span class="inline-spinner" aria-hidden="true"></span>' + txt;
+          } else {
+            statusEl.textContent = txt;
+          }
         }
 
         function sameAsSaved() {
@@ -5282,7 +5303,8 @@
           );
           const generateButton = $("rdGenerate");
           generateButton.disabled = true;
-          status.textContent = "লোড হচ্ছে…";
+          status.innerHTML =
+            '<span class="inline-spinner" aria-hidden="true"></span>লোড হচ্ছে…';
           $("rdSummary").hidden = true;
           $("rdActions").hidden = true;
           $("rdRows").replaceChildren();
@@ -7483,7 +7505,8 @@
             postBtn.onclick = async () => {
               postBtn.disabled = true;
               postStatus.style.color = "#1a3f7a";
-              postStatus.textContent = "Post হচ্ছে…";
+              postStatus.innerHTML =
+                '<span class="inline-spinner" aria-hidden="true"></span>Post হচ্ছে…';
               let failCount = 0;
               for (const ref of postRefs) {
                 try {
