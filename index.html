@@ -950,6 +950,10 @@
         outline-offset: 0;
         border-color: #1a3f7a;
       }
+      #entry #de_ipi::placeholder {
+        color: #c4c4c4;
+        opacity: 1;
+      }
       #entry #de_wp_mpo::placeholder,
       #entry #de_wp_am::placeholder {
         color: #c81e1e;
@@ -2856,7 +2860,7 @@
                     type="text"
                     id="de_ipi"
                     autocomplete="off"
-                    placeholder="IPI-007048"
+                    placeholder="IPI-××××××"
                     spellcheck="false"
                   />
                 </div>
@@ -6943,7 +6947,19 @@
             encodeURIComponent('"' + ipi + '\uf8ff"');
           try {
             const data = await getJSON(base + q);
-            const keys = Object.keys(data || {});
+            // key হুবহু IPI হতে হবে (অথবা "IPI_নাম" ফরম্যাট), শুধু prefix
+            // মিললেই হবে না। আর DESIGNATION "MPO" হলে সেটা সাধারণ কর্মী,
+            // Admin নয় — Emp_Password নোডে MPO-দেরও রেকর্ড থাকে।
+            const keys = Object.keys(data || {}).filter((k) => {
+              if (k !== ipi && !k.startsWith(ipi + "_")) return false;
+              const rec = data[k];
+              const des = String(
+                (rec && (rec.DESIGNATION || rec.Designation)) || "",
+              )
+                .trim()
+                .toUpperCase();
+              return des !== "MPO";
+            });
             return keys.length ? data[keys[0]] : null;
           } catch (e) {
             return null;
