@@ -61,7 +61,7 @@
         display: flex;
         flex-direction: column;
       }
-      .sign:not(.rsm) > div:first-child {
+      .sign > div {
         position: relative;
       }
       .sign .sig-date {
@@ -4148,7 +4148,8 @@
           const mpo = $("de_mpo").value.trim();
           const am = $("de_am").value.trim();
           // Admin মোডে AM ঘর দেখানোই হয় না, তাই সেটা বাধ্যতামূলক নয়
-          if (!ipi || !mpo || (!pendingAdminRecord && !am)) {
+          const needAm = !pendingAdminRecord && !isRsm();
+          if (!ipi || !mpo || (needAm && !am)) {
             setSt(
               "err",
               pendingAdminRecord
@@ -4225,6 +4226,45 @@
           )
             return o.img;
           return "";
+        }
+        // AM কোনো MPO-র এন্ট্রি রিপোর্ট থেকে ভিউ/প্রিন্ট করলে তার আজকের সই
+        // "Signature of AM" ঘরে বসে। ভিউ/প্রিন্ট পেজ নতুন ট্যাবে খোলে (সেখানে
+        // ফর্মের ঘরগুলো ভরা থাকে না), তাই লগইন করা কর্মী ও সই সরাসরি
+        // localStorage থেকে পড়া হয়। শর্ত: Admin নয়, TEAM = Area, আজকের সই আছে,
+        // এবং এন্ট্রিটা তার এরিয়ার অধীনে।
+        function viewerSupervisor(data) {
+          try {
+            const emp = JSON.parse(localStorage.getItem(EMP_KEY) || "null");
+            const sg = JSON.parse(localStorage.getItem(SIG_KEY) || "null");
+            if (!emp || emp.isAdmin) return null;
+            const info = emp.employeeInfo || {};
+            const team = info.team || "";
+            const isAm = /^area$/i.test(team),
+              isR = /^(zone|region)/i.test(team);
+            if (!isAm && !isR) return null;
+            if (!sg || !sg.img || sg.date !== todayStr()) return null;
+            if (norm(sg.ipi) !== norm(emp.ipi)) return null;
+            const e = (data && data.employeeInfo) || {};
+            const f = (data && data.fields) || {};
+            const up = (v) => String(v || "").trim().toUpperCase();
+            let mine = false;
+            if (isR) {
+              const lv = /^zone/i.test(team) ? "zone" : "region";
+              if (e[lv + "Code"] && info[lv + "Code"])
+                mine = up(e[lv + "Code"]) === up(info[lv + "Code"]);
+              else if (e[lv + "Name"] && info[lv + "Name"])
+                mine = up(e[lv + "Name"]) === up(info[lv + "Name"]);
+            } else {
+              const me = norm(emp.ipi);
+              if (e.amIpi) mine = norm(e.amIpi) === me;
+              else if (e.areaName && info.areaName)
+                mine = up(e.areaName) === up(info.areaName);
+              else mine = !!emp.am && up(f.am) === up(emp.am);
+            }
+            return mine ? { kind: isR ? "rsm" : "am", img: sg.img } : null;
+          } catch (err) {
+            return null;
+          }
         }
         function storeSignature(img) {
           sigMem = { date: todayStr(), ipi: $("de_ipi").value.trim(), img: img };
@@ -4318,6 +4358,11 @@
         function openSignature(after) {
           sigAfter = after || null;
           sigClear();
+          $("sigTitle").textContent = isRsm()
+            ? "RSM সিগনেচার"
+            : isAreaManager()
+              ? "AM সিগনেচার"
+              : "MPO সিগনেচার";
           const d = new Date();
           $("sigInfo").textContent =
             "তারিখ: " +
@@ -4580,32 +4625,50 @@
               if (pg.fields[k])
                 pg.fields[k].value = (data.fields && data.fields[k]) || "";
             });
-            const sigBox = pg.form.querySelector(".sign:not(.rsm) > div");
-            if (sigBox) {
+            const sigBoxes = pg.form.querySelectorAll(".sign:not(.rsm) > div");
+            const applySig = (sigBox, src, dateText) => {
+              if (!sigBox) return;
               let im = sigBox.querySelector(".sig-img");
-              if (data.signatureMpo) {
+              if (src) {
                 if (!im) {
                   im = document.createElement("img");
                   im.className = "sig-img";
                   im.alt = "";
                   sigBox.appendChild(im);
                 }
-                im.src = data.signatureMpo;
+                im.src = src;
               } else if (im) {
                 im.remove();
               }
               // সিগনেচারের তারিখ: সইয়ের বাঁ পাশে, দাগের ঠিক ওপরে ছোট করে
               let dt = sigBox.querySelector(".sig-date");
-              if (data.signatureMpo && data.signatureDate) {
+              if (src && dateText) {
                 if (!dt) {
                   dt = document.createElement("span");
                   dt.className = "sig-date";
                   sigBox.appendChild(dt);
                 }
-                dt.textContent = data.signatureDate;
+                dt.textContent = dateText;
               } else if (dt) {
                 dt.remove();
               }
+            };
+            // ১ম বক্স = Signature of MPO, ২য় বক্স = Signature of AM
+            applySig(sigBoxes[0], data.signatureMpo, data.signatureDate);
+            const vs = viewerSupervisor(data);
+            if (data.signatureAm) {
+              applySig(sigBoxes[1], data.signatureAm, data.signatureDate);
+            } else {
+              const amSig = vs && vs.kind === "am" ? vs.img : "";
+              applySig(sigBoxes[1], amSig, amSig ? todayDMY() : "");
+            }
+            // Signature of RSM — আলাদা ফুটারের প্রথম ঘর
+            const rsmBox = pg.form.querySelector(".sign.rsm > div:first-child");
+            if (data.signatureRsm) {
+              applySig(rsmBox, data.signatureRsm, data.signatureDate);
+            } else {
+              const rsmSig = vs && vs.kind === "rsm" ? vs.img : "";
+              applySig(rsmBox, rsmSig, rsmSig ? todayDMY() : "");
             }
             const b = pg.form.querySelector(".inv-no-badge");
             if (b) {
@@ -5170,7 +5233,10 @@
             rows: items.map((it) => it.row),
             codes: items.map((it) => it.code),
             employeeInfo: { ...currentEmployeeInfo },
-            signatureMpo: isAdmin ? "" : getTodaySignature(),
+            signatureMpo:
+              isAdmin || isSupervisor() ? "" : getTodaySignature(),
+            signatureAm: isAreaManager() ? getTodaySignature() : "",
+            signatureRsm: isRsm() ? getTodaySignature() : "",
             signatureDate: isAdmin || !getTodaySignature() ? "" : todayDMY(),
           };
         }
@@ -5818,6 +5884,8 @@
               codes: pending.codes,
               employeeInfo: pending.employeeInfo || {},
               signatureMpo: pending.signatureMpo || "",
+              signatureAm: pending.signatureAm || "",
+              signatureRsm: pending.signatureRsm || "",
               signatureDate: pending.signatureDate || "",
               invoiceNo: pending.invoiceNo,
               savedAt: now.toISOString(),
@@ -6015,6 +6083,40 @@
             // দেখবে। প্রতিটি এন্ট্রির মালিকের IPI No fields.mpo-এর ভেতরে
             // "IPI-XXXXXX - নাম" আকারে সেভ থাকে (দেখুন collectEntry/mpoText)।
             const myIpi = isAdmin ? null : norm($("de_ipi").value.trim());
+            // Area Manager হলে: নিজের এরিয়ার অধীন সব টেরিটরির এন্ট্রি দেখবে
+            // (এন্ট্রিতে সেভ থাকা employeeInfo.amIpi / areaName মিলিয়ে;
+            // পুরনো এন্ট্রিতে employeeInfo না থাকলে AM-এর নাম দিয়ে মেলানো হয়)
+            const amMode = isAreaManager();
+            const myAmName = ($("de_am").value || currentEmployeeInfo.amName || "")
+              .trim()
+              .toUpperCase();
+            const myAreaName = (currentEmployeeInfo.areaName || "")
+              .trim()
+              .toUpperCase();
+            function entryUnderMyArea(entry) {
+              const info = (entry && entry.employeeInfo) || {};
+              if (info.amIpi) return norm(info.amIpi) === myIpi;
+              if (info.areaName && myAreaName)
+                return String(info.areaName).trim().toUpperCase() === myAreaName;
+              const f = (entry && entry.fields) || {};
+              return !!myAmName && String(f.am || "").trim().toUpperCase() === myAmName;
+            }
+            // RSM (Zone/Region) হলে: নিজের Region/Zone-এর অধীন সব এরিয়া-টেরিটরি
+            const rsmMode = isRsm();
+            const rsmLevel = /^zone/i.test(currentEmployeeInfo.team || "")
+              ? "zone"
+              : "region";
+            const up = (v) => String(v || "").trim().toUpperCase();
+            const myLvCode = up(currentEmployeeInfo[rsmLevel + "Code"]);
+            const myLvName = up(currentEmployeeInfo[rsmLevel + "Name"]);
+            function entryUnderMyRegion(entry) {
+              const info = (entry && entry.employeeInfo) || {};
+              const ec = up(info[rsmLevel + "Code"]);
+              if (ec && myLvCode) return ec === myLvCode;
+              const en = up(info[rsmLevel + "Name"]);
+              if (en && myLvName) return en === myLvName;
+              return false;
+            }
             function entryOwnerIpi(entry) {
               const mpoText = ((entry && entry.fields && entry.fields.mpo) || "").trim();
               const dash = mpoText.indexOf(" - ");
@@ -6028,16 +6130,34 @@
                   // Summary টেবিলে দেখানো হয় না (raw/"Generate" মোডে সব
                   // এন্ট্রিই দেখা যাবে, যেমন আগে ছিল)।
                   if (reportMode === "summary" && data.posted) return;
-                  if (myIpi && entryOwnerIpi(data) !== myIpi) return;
+                  if (
+                    myIpi &&
+                    entryOwnerIpi(data) !== myIpi &&
+                    !(amMode && entryUnderMyArea(data)) &&
+                    !(rsmMode && entryUnderMyRegion(data))
+                  )
+                    return;
                   entries.push({ date, key: id, entry: data });
                 }
               });
             });
+            const areaOf = (e) =>
+              (e.entry.employeeInfo && e.entry.employeeInfo.areaName) ||
+              "Area অজানা";
             entries.sort(
               (left, right) =>
+                (rsmMode
+                  ? areaOf(left).localeCompare(areaOf(right)) ||
+                    String(
+                      (left.entry.employeeInfo || {}).territoryCode || "",
+                    ).localeCompare(
+                      String((right.entry.employeeInfo || {}).territoryCode || ""),
+                    )
+                  : 0) ||
                 new Date(left.entry.savedAt || 0) -
-                new Date(right.entry.savedAt || 0),
+                  new Date(right.entry.savedAt || 0),
             );
+            const entryValueList = [];
             let quantityTotal = 0;
             let valueTotal = 0;
             const reportRows = entries.map(({ date, key, entry }, index) => {
@@ -6052,6 +6172,7 @@
                   valueTotal += value;
                 }
               });
+              entryValueList[index] = entryValue;
               const rowElement = document.createElement("tr");
               const checkCell = document.createElement("td");
               const checkInput = document.createElement("input");
@@ -6070,7 +6191,10 @@
                 String(index + 1),
                 entry.invoiceNo || "-",
                 chemist,
-                fields.mpo || "-",
+                (fields.mpo || "-") +
+                  (rsmMode && entry.employeeInfo && entry.employeeInfo.territoryName
+                    ? " (" + entry.employeeInfo.territoryName + ")"
+                    : ""),
                 String(Math.round(entryValue)),
               ].forEach((text) => {
                 const cell = document.createElement("td");
@@ -6089,7 +6213,36 @@
               rowElement.appendChild(actionCell);
               return rowElement;
             });
-            $("rdRows").replaceChildren(...reportRows);
+            let finalRows = reportRows;
+            if (rsmMode) {
+              // এরিয়া ভিত্তিক গ্রুপ: প্রতিটি এরিয়ার আগে হেডার রো (সংখ্যা ও মোট)
+              const groups = new Map();
+              entries.forEach((e, i) => {
+                const a = areaOf(e);
+                if (!groups.has(a)) groups.set(a, { rows: [], val: 0 });
+                const g = groups.get(a);
+                g.rows.push(reportRows[i]);
+                g.val += entryValueList[i] || 0;
+              });
+              finalRows = [];
+              groups.forEach((g, a) => {
+                const tr = document.createElement("tr");
+                const td = document.createElement("td");
+                td.colSpan = 7;
+                td.style.cssText =
+                  "background:#e8eef8;font-weight:700;text-align:left";
+                td.textContent =
+                  "Area: " +
+                  a +
+                  " — " +
+                  g.rows.length +
+                  " টি এন্ট্রি, মোট " +
+                  Math.round(g.val);
+                tr.appendChild(td);
+                finalRows.push(tr, ...g.rows);
+              });
+            }
+            $("rdRows").replaceChildren(...finalRows);
             $("rdCheckAll").checked = false;
             $("rdCheckAll").indeterminate = false;
             $("rdGrandValue").textContent = String(Math.round(valueTotal));
@@ -6130,7 +6283,17 @@
           generateReport();
         };
 
+        // AM আজকের সই না দিয়ে থাকলে প্রিন্টে "Signature of AM" ফাঁকা যেত,
+        // তাই View/Print-এর আগে সইয়ের প্যাড খুলে সই নেওয়া হয়
+        function needAmSignature(retry) {
+          if (isSupervisor() && !getTodaySignature()) {
+            openSignature(retry);
+            return true;
+          }
+          return false;
+        }
         function openEntryInNewTab(date, key) {
+          if (needAmSignature(() => openEntryInNewTab(date, key))) return;
           // Summary মোডে (rdSummaryBtn চাপার পর) রো-এর "View" চাপলে যেন
           // Generate/raw মোডের মতো Saved Form না দেখিয়ে, Summary Form
           // ফরম্যাটেই (একটামাত্র এন্ট্রি নিয়ে) খোলে — তাই এখানে
@@ -6155,6 +6318,7 @@
         }
         $("rdPrintAll").onclick = () => {
           if (!lastReportEntries.length) return;
+          if (needAmSignature(() => $("rdPrintAll").onclick())) return;
           const checkedIdx = Array.from(
             document.querySelectorAll("#rdRows .rd-row-check"),
           )
@@ -6636,6 +6800,22 @@
           // চাওয়া হয় ও যাচাই হয় ----
           isAdmin = false,
           pendingAdminRecord = null;
+        // ---- Area Manager: রেকর্ডের TEAM = "Area" হলে সে AM (findAmInfo-র নিয়মই)।
+        // Admin মোডে এটা প্রযোজ্য নয়। AM নিজের এরিয়ার (AREA NAME) অধীন সব
+        // টেরিটরির রিপোর্ট দেখবে, আর তার সই ফরমের "Signature of AM"-এ বসবে ----
+        function isAreaManager() {
+          return !isAdmin && /^area$/i.test(currentEmployeeInfo.team || "");
+        }
+        // ---- RSM: TEAM = Zone / Region। সে নিজের Region/Zone-এর অধীন সব
+        // এরিয়া ও টেরিটরির রিপোর্ট (এরিয়া ভিত্তিক সাজানো) দেখবে; তার সই
+        // ফরমের "Signature of RSM" ঘরে বসবে ----
+        const RSM_TEAM = /^(zone|region)/i;
+        function isRsm() {
+          return !isAdmin && RSM_TEAM.test(currentEmployeeInfo.team || "");
+        }
+        function isSupervisor() {
+          return isAreaManager() || isRsm();
+        }
         function updateTerritoryFields() {
           $("de_group").textContent = currentEmployeeInfo.team || "-";
           $("de_am").value = currentEmployeeInfo.amName || "";
@@ -6714,6 +6894,7 @@
           if (team && /^area$/i.test(team)) {
             return personInfo(obj);
           }
+          if (team && /^(zone|region)/i.test(team)) return "";
 
           const areaName = pick(obj, "AREA NAME");
           if (!areaName) return "";
