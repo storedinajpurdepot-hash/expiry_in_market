@@ -1364,6 +1364,14 @@
         border-color: #1a3f7a;
         color: #fff;
       }
+      #entry #empOk.busy {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      #entry #empOk:disabled {
+        opacity: 0.85;
+        cursor: wait;
+      }
       #entry button.warn {
         border-color: #b33;
         color: #b33;
@@ -4130,19 +4138,44 @@
           if (!dlg.open) dlg.showModal();
           setTimeout(() => $("de_ccode").focus(), 50);
         }
+        // OK চাপলে (খোঁজা চলছে বা না চলছে) বাটনে স্পিনার ঘোরে; খোঁজা শেষ হলে
+        // নিজে থেকেই যাচাই হয়ে এগোয় — আবার চাপতে হয় না
+        let okRunning = false;
         async function tryEmployeeOk() {
+          if (okRunning) return;
+          okRunning = true;
+          const b = $("empOk");
+          const label = b.textContent;
+          b.disabled = true;
+          b.innerHTML = '<span class="inline-spinner"></span>OK';
+          try {
+            await tryEmployeeOkCore();
+          } finally {
+            okRunning = false;
+            b.disabled = false;
+            b.textContent = label;
+          }
+        }
+        async function tryEmployeeOkCore() {
           // নতুন IPI লেখার পর খোঁজা (lookup) শেষ হওয়ার আগেই OK চাপলে নাম/AM
           // তখনও ফাঁকা থাকত, তাই প্রথমবার এরর আসত ও দ্বিতীয়বার চাপতে হতো।
           // এখন চলমান/অপেক্ষমাণ খোঁজা শেষ হওয়া পর্যন্ত অপেক্ষা করে তারপর যাচাই।
-          if (lookupTimerActive) {
-            clearTimeout(timer);
-            lookupTimerActive = false;
-            lookupRun = lookup();
-          }
-          if (lookupRun) {
-            try {
-              await lookupRun;
-            } catch (e) {}
+          // লুপ: অপেক্ষার মধ্যে নতুন লুকআপ শুরু হলে (যেমন মোবাইলে কীবোর্ড নামার
+          // পর change ইভেন্ট) সেটাও শেষ হওয়া পর্যন্ত অপেক্ষা করে, তাই এক ক্লিকেই কাজ হয়
+          for (let n = 0; n < 6; n++) {
+            if (lookupTimerActive) {
+              clearTimeout(timer);
+              lookupTimerActive = false;
+              lookupRun = lookup();
+            }
+            const run = lookupRun;
+            if (run) {
+              try {
+                await run;
+              } catch (e) {}
+            }
+            if (!lookupTimerActive && lookupInFlight === 0 && run === lookupRun)
+              break;
           }
           const ipi = $("de_ipi").value.trim();
           const mpo = $("de_mpo").value.trim();
@@ -7782,7 +7815,24 @@
           }
         }
 
+        // ---- OK বাটন: IPI-র খোঁজা (লুকআপ) শেষ না হওয়া পর্যন্ত ঝাপসা ও নিষ্ক্রিয় ----
+        let lookupInFlight = 0;
+        function refreshOk() {
+          const busy = lookupTimerActive || lookupInFlight > 0;
+          const b = $("empOk");
+          if (b) b.classList.toggle("busy", busy);
+        }
         async function lookup() {
+          lookupInFlight++;
+          refreshOk();
+          try {
+            return await lookupCore();
+          } finally {
+            lookupInFlight--;
+            refreshOk();
+          }
+        }
+        async function lookupCore() {
           const raw = $("de_ipi").value.trim();
           const mine = ++seq;
           currentEmployeeInfo = {};
@@ -8212,6 +8262,7 @@
           pendingAdminRecord = null;
           setAdminMode(false);
           lookupTimerActive = true;
+          refreshOk();
           timer = setTimeout(() => {
             lookupTimerActive = false;
             lookupRun = lookup();
