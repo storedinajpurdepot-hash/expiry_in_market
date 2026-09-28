@@ -4247,6 +4247,7 @@
         function sigClear() {
           sigCtx.clearRect(0, 0, sigCv.width, sigCv.height);
           sigDirty = false;
+          $("sigErr").style.color = "";
           $("sigErr").textContent = "";
         }
         const sigPad = $("sigPad"),
@@ -4463,7 +4464,8 @@
             sigCtx.imageSmoothingQuality = "high";
             sigCtx.drawImage(rc, minX, minY, cw, ch, (W - w) / 2, (H - h) / 2, w, h);
             sigDirty = true;
-            URL.revokeObjectURL(img.src);
+            $("sigErr").style.color = "#0a7a2f";
+            $("sigErr").textContent = "✓ ছবি তোলা হয়েছে — ঠিক থাকলে \"সেভ\" চাপুন, না হলে আবার ক্যামেরা চাপুন।";
         }
 
         // লাইভ ক্যামেরা + গাইড বক্স: বক্সের ভেতরের অংশটুকুই কেটে নিয়ে পরিষ্কার করা হয়
@@ -4504,7 +4506,17 @@
         function captureGuide() {
           const vw = camVideo.videoWidth,
             vh = camVideo.videoHeight;
-          if (!vw || !vh) return;
+          if (!vw || !vh) {
+            $("sigErr").style.color = "";
+            $("sigErr").textContent = "ক্যামেরা এখনো প্রস্তুত হয়নি, এক সেকেন্ড পরে আবার চাপুন।";
+            return;
+          }
+          camWrap.style.transition = "none";
+          camWrap.style.filter = "brightness(2.5)";
+          setTimeout(() => {
+            camWrap.style.transition = "filter .25s";
+            camWrap.style.filter = "";
+          }, 60);
           const cr = camWrap.getBoundingClientRect(),
             br = camBox.getBoundingClientRect();
           // video object-fit: cover — দেখানো অংশ থেকে আসল ভিডিও পিক্সেলে রূপান্তর
@@ -4520,8 +4532,14 @@
           sw = Math.min(vw - sx, sw);
           sh = Math.min(vh - sy, sh);
           sigClear();
-          sigProcess(camVideo, sx, sy, sw, sh);
-          stopCamera();
+          try {
+            sigProcess(camVideo, sx, sy, sw, sh);
+          } catch (err) {
+            $("sigErr").style.color = "";
+            $("sigErr").textContent = "ছবি প্রসেস করা যায়নি, আবার চেষ্টা করুন।";
+          } finally {
+            stopCamera();
+          }
         }
         $("sigCamera").addEventListener("click", startCamera);
         $("sigGallery").addEventListener("click", () => $("sigFile").click());
