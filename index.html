@@ -76,7 +76,7 @@
       }
       .sign .sig-img {
         position: absolute;
-        right: 0;
+        right: 9mm;
         bottom: 100%;
         height: 15mm;
         max-width: 42mm;
@@ -939,6 +939,68 @@
         border-color: #1b7a3d;
         color: #fff;
       }
+      .toolbar button#viewSignBtn {
+        background: #1b7a3d;
+        border-color: #1b7a3d;
+        color: #fff;
+      }
+      .toolbar button#viewSignBtn:disabled {
+        background: #9aa3ad;
+        border-color: #9aa3ad;
+        cursor: default;
+      }
+      #reportDlg .rd-role-badge {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: #1a3f7a;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        vertical-align: middle;
+      }
+      #reportDlg .rd-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      #reportDlg .rd-filters[hidden],
+      #reportDlg .rd-filters .rd-field[hidden] {
+        display: none;
+      }
+      #reportDlg .rd-filters .rd-field {
+        flex: 1 1 130px;
+      }
+      #reportDlg .rd-filters .f {
+        color: #333;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      #reportDlg .rd-filters select {
+        padding: 6px 6px;
+        border: 1px solid #999;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 12.5px;
+        background: #fff;
+        min-width: 0;
+        width: 100%;
+      }
+      #reportDlg .rd-sign-badge {
+        display: inline-block;
+        margin-right: 6px;
+        font-size: 10.5px;
+        color: #a33;
+        white-space: nowrap;
+      }
+      #reportDlg .rd-sign-badge.ok {
+        color: #1b7a3d;
+        font-weight: 700;
+      }
       .toolbar button#summaryPostBtn:disabled {
         background: #9aa3ad;
         border-color: #9aa3ad;
@@ -987,6 +1049,22 @@
         color: #1a3f7a;
         font-size: 15px;
         font-weight: 700;
+      }
+      #entry header.dh h2 .panel-badge {
+        display: inline-block;
+        margin-left: 14px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: #1a3f7a;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        vertical-align: middle;
+        white-space: nowrap;
+      }
+      #entry header.dh h2 .panel-badge[hidden] {
+        display: none;
       }
       #entry header.dh .header-actions {
         display: flex;
@@ -2160,7 +2238,7 @@
         border: 0;
         border-radius: 10px;
         padding: 0;
-        width: min(980px, 96vw);
+        width: min(1240px, 98vw);
         height: min(760px, 97vh);
         max-height: 97vh;
         color: #111;
@@ -2289,6 +2367,39 @@
         width: 80px;
         text-align: center;
       }
+      #reportDlg col.c-ver {
+        width: 92px;
+      }
+      #reportDlg th.rd-ver,
+      #reportDlg td.rd-ver {
+        text-align: center;
+        white-space: nowrap;
+        font-size: 13.5px;
+        padding: 9px 4px;
+      }
+      #reportDlg th.rd-ver {
+        font-size: 13px;
+      }
+      #reportDlg thead tr#rdHeadRow2 th {
+        width: auto;
+      }
+      #reportDlg th.rd-ver[hidden],
+      #reportDlg tr[hidden] {
+        display: none;
+      }
+      #reportDlg th.rd-ver-group {
+        text-align: center;
+      }
+      #reportDlg .rd-ver-ok {
+        color: #1b7a3d;
+        font-weight: 700;
+      }
+      #reportDlg .rd-ver-no {
+        color: #b00020;
+      }
+      #reportDlg .rd-ver-off {
+        color: #777;
+      }
       #reportDlg .rd-check {
         width: 15px;
         height: 15px;
@@ -2312,9 +2423,10 @@
       }
       #reportDlg footer {
         display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        gap: 6px;
+        align-items: flex-end;
         margin-bottom: 10px;
         padding-bottom: 10px;
         border-bottom: 1px solid #ddd;
@@ -2331,6 +2443,40 @@
           background-color 0.15s ease,
           color 0.15s ease,
           border-color 0.15s ease;
+      }
+      #reportDlg footer .rd-foot-field {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: 200px;
+        flex-direction: column;
+        gap: 2px;
+      }
+      #reportDlg footer .rd-foot-field[hidden] {
+        display: none;
+      }
+      #reportDlg footer .rd-foot-field .f {
+        color: #333;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      #reportDlg footer .rd-foot-field select {
+        padding: 6px 6px;
+        border: 1px solid #999;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 12.5px;
+        background: #fff;
+        min-width: 0;
+        width: 100%;
+      }
+      #reportDlg footer .rd-actions {
+        margin-left: auto;
+        flex: 0 0 auto;
+      }
+      #reportDlg footer button,
+      #reportDlg footer .rd-actions button {
+        flex: 0 0 auto;
+        white-space: nowrap;
       }
       #reportDlg footer #rdClose {
         background: #d9363e;
@@ -2602,6 +2748,18 @@
           width: 100%;
           font-size: 9px;
         }
+        #reportDlg col.c-ver {
+          width: 60px;
+        }
+        #reportDlg table {
+          min-width: 760px;
+        }
+        #reportDlg th.rd-ver,
+        #reportDlg td.rd-ver {
+          font-size: 10.5px;
+          padding: 6px 2px;
+          white-space: normal;
+        }
         #reportDlg th,
         #reportDlg td {
           padding: 4px 2px;
@@ -2640,6 +2798,22 @@
         #reportDlg footer {
           margin-bottom: 8px;
           padding-bottom: 8px;
+          gap: 4px;
+        }
+        #reportDlg footer button {
+          padding: 6px 7px;
+          font-size: 11.5px;
+        }
+        #reportDlg footer .rd-actions button {
+          padding: 6px 7px;
+          font-size: 11.5px;
+        }
+        #reportDlg footer .rd-foot-field .f {
+          font-size: 10.5px;
+        }
+        #reportDlg footer .rd-foot-field select {
+          padding: 5px 2px;
+          font-size: 11px;
         }
       }
       /* ---- Hidden until Chemist Code search succeeds ---- */
@@ -2904,6 +3078,11 @@
       <button type="button" id="openEntry" class="primary">New Entry</button>
       <button type="button" id="viewFormPrint" hidden>প্রিন্ট করুন</button>
       <button type="button" id="summaryPostBtn" hidden>Post</button>
+      <button type="button" id="viewSignBtn" hidden>স্বাক্ষর করুন</button>
+      <span
+        id="viewSignStatus"
+        style="margin-left: 8px; font-size: 13px; color: #1a3f7a"
+      ></span>
       <span
         id="summaryPostStatus"
         style="margin-left: 8px; font-size: 13px; color: #1a3f7a"
@@ -3028,6 +3207,7 @@
             <span id="entrySectionName" class="section-name"
               >Employee Information</span
             >
+            <span id="entryPanelBadge" class="panel-badge" hidden></span>
           </h2>
           <div class="header-actions">
             <button
@@ -3456,6 +3636,13 @@
           </label>
           <button type="button" id="rdGenerate">Generate</button>
           <button type="button" id="rdSummaryBtn">Summary</button>
+          <button type="button" id="rdPostedBtn" hidden>Posted</button>
+        </div>
+        <div class="rd-filters" id="rdFilters" hidden>
+          <label class="rd-field" id="rdAreaWrap" hidden>
+            <span class="f">Area</span>
+            <select id="rdArea"></select>
+          </label>
         </div>
         <p class="rd-status" id="rdStatus" role="status" aria-live="polite"></p>
         <div class="rd-summary" id="rdSummary" hidden>
@@ -3469,6 +3656,18 @@
           </span>
         </div>
         <footer>
+          <label class="rd-field rd-foot-field" id="rdTerrWrap" hidden>
+            <span class="f">Territory</span>
+            <select id="rdTerr"></select>
+          </label>
+          <label class="rd-field rd-foot-field" id="rdSignWrap" hidden>
+            <span class="f">স্বাক্ষর</span>
+            <select id="rdSign">
+              <option value="all">সব</option>
+              <option value="unsigned">স্বাক্ষরহীন</option>
+              <option value="signed">স্বাক্ষরিত</option>
+            </select>
+          </label>
           <button type="button" id="rdClose">Close</button>
           <div class="rd-actions" id="rdActions" hidden>
             <button type="button" id="rdPrintAll">All Print</button>
@@ -3476,9 +3675,14 @@
         </footer>
         <div class="rd-table-wrap">
           <table>
+            <colgroup>
+              <col /><col /><col /><col /><col /><col /><col />
+              <col class="c-ver" /><col class="c-ver" />
+              <col class="c-ver" /><col class="c-ver" />
+            </colgroup>
             <thead>
-              <tr>
-                <th>
+              <tr id="rdHeadRow1">
+                <th class="rd-h1">
                   <input
                     type="checkbox"
                     id="rdCheckAll"
@@ -3486,12 +3690,21 @@
                     title="সব নির্বাচন"
                   />
                 </th>
-                <th>Sl.</th>
-                <th>Invoice No</th>
-                <th>Chemist code &amp; Name</th>
-                <th>MPO Name</th>
-                <th>Value</th>
-                <th>Action</th>
+                <th class="rd-h1">Sl.</th>
+                <th class="rd-h1">Invoice No</th>
+                <th class="rd-h1">Chemist code &amp; Name</th>
+                <th class="rd-h1">MPO Name</th>
+                <th class="rd-h1">Value</th>
+                <th class="rd-h1">Action</th>
+                <th class="rd-ver rd-ver-group" colspan="4" hidden>
+                  Verification
+                </th>
+              </tr>
+              <tr id="rdHeadRow2" hidden>
+                <th class="rd-ver">AM</th>
+                <th class="rd-ver">RSM</th>
+                <th class="rd-ver">DM</th>
+                <th class="rd-ver">POST</th>
               </tr>
             </thead>
             <tbody id="rdRows"></tbody>
@@ -3499,7 +3712,7 @@
               <tr class="grand-row">
                 <td colspan="5">Grand Total</td>
                 <td id="rdGrandValue">0</td>
-                <td></td>
+                <td id="rdGrandTail"></td>
               </tr>
             </tfoot>
           </table>
@@ -4117,6 +4330,13 @@
         // Code/Name/Address সেকশনই দেখানো থাকে।
         function setEntrySection(name) {
           $("entrySectionName").textContent = name;
+          // Chemist Information-এর পাশে কোন প্যানেলে আছে (MPO/AM/ZONE/...) দেখানো হয়
+          const badge = $("entryPanelBadge");
+          if (badge) {
+            const onChemist = name === "Chemist Information";
+            badge.hidden = !onChemist;
+            badge.textContent = onChemist ? roleLabel() + " PANEL" : "";
+          }
         }
         function showEmployeeSection() {
           $("employeeFieldsBlock").classList.remove("pre-ok-hidden");
@@ -4210,7 +4430,7 @@
           const mpo = $("de_mpo").value.trim();
           const am = $("de_am").value.trim();
           // Admin মোডে AM ঘর দেখানোই হয় না, তাই সেটা বাধ্যতামূলক নয়
-          const needAm = !pendingAdminRecord && !isRsm();
+          const needAm = !pendingAdminRecord && !isRsm() && !isDepotManager();
           if (!ipi || !mpo || (needAm && !am)) {
             setSt(
               "err",
@@ -4253,6 +4473,7 @@
         // ফিল্ডে ছোট PNG (data URL) হিসেবে যায় এবং প্রিন্টে "Signature of MPO"-র
         // দাগের ওপরে বসে।
         const SIG_KEY = "formE_mpoSignature";
+        const DM_ROLE = /depot/i; // Depot Manager চেনার নিয়ম (TEAM/DESIGNATION-এ "Depot")
         let sigMem = null;
         function todayStr() {
           const d = new Date();
@@ -4302,15 +4523,26 @@
             const info = emp.employeeInfo || {};
             const team = info.team || "";
             const isAm = /^area$/i.test(team),
-              isR = /^(zone|region)/i.test(team);
-            if (!isAm && !isR) return null;
+              isR = /^(zone|region)/i.test(team),
+              isD =
+                !isAm &&
+                !isR &&
+                (DM_ROLE.test(team) || DM_ROLE.test(info.designation || ""));
+            if (!isAm && !isR && !isD) return null;
             if (!sg || !sg.img || sg.date !== todayStr()) return null;
             if (norm(sg.ipi) !== norm(emp.ipi)) return null;
             const e = (data && data.employeeInfo) || {};
             const f = (data && data.fields) || {};
             const up = (v) => String(v || "").trim().toUpperCase();
             let mine = false;
-            if (isR) {
+            if (isD) {
+              // Depot Manager: RSM সই না করা পর্যন্ত সই বসবে না; ডিপো মিলতে হবে
+              if (!data || !data.signatureRsm) return null;
+              mine =
+                e.depotName && info.depotName
+                  ? up(e.depotName) === up(info.depotName)
+                  : true;
+            } else if (isR) {
               const lv = /^zone/i.test(team) ? "zone" : "region";
               if (e[lv + "Code"] && info[lv + "Code"])
                 mine = up(e[lv + "Code"]) === up(info[lv + "Code"]);
@@ -4323,7 +4555,13 @@
                 mine = up(e.areaName) === up(info.areaName);
               else mine = !!emp.am && up(f.am) === up(emp.am);
             }
-            return mine ? { kind: isR ? "rsm" : "am", img: sg.img } : null;
+            return mine
+              ? {
+                  kind: isD ? "dm" : isR ? "rsm" : "am",
+                  img: sg.img,
+                  ipi: emp.ipi,
+                }
+              : null;
           } catch (err) {
             return null;
           }
@@ -4427,7 +4665,9 @@
             ? "RSM সিগনেচার"
             : isAreaManager()
               ? "AM সিগনেচার"
-              : "MPO সিগনেচার";
+              : isDepotManager()
+                ? "Depot Manager সিগনেচার"
+                : "MPO সিগনেচার";
           const d = new Date();
           $("sigInfo").textContent =
             "তারিখ: " +
@@ -4729,35 +4969,36 @@
               } else if (im) {
                 im.remove();
               }
-              // সিগনেচারের তারিখ: সইয়ের বাঁ পাশে, দাগের ঠিক ওপরে ছোট করে
-              let dt = sigBox.querySelector(".sig-date");
-              if (src && dateText) {
-                if (!dt) {
-                  dt = document.createElement("span");
-                  dt.className = "sig-date";
-                  sigBox.appendChild(dt);
-                }
-                dt.textContent = dateText;
-              } else if (dt) {
-                dt.remove();
-              }
+              // সিগনেচারের সাথে তারিখ দেখানো হয় না — পুরনো তারিখ-স্প্যান থাকলে মুছে দেওয়া হয়
+              const dt = sigBox.querySelector(".sig-date");
+              if (dt) dt.remove();
             };
             // ১ম বক্স = Signature of MPO, ২য় বক্স = Signature of AM
             applySig(sigBoxes[0], data.signatureMpo, data.signatureDate);
-            const vs = viewerSupervisor(data);
-            if (data.signatureAm) {
-              applySig(sigBoxes[1], data.signatureAm, data.signatureDate);
-            } else {
-              const amSig = vs && vs.kind === "am" ? vs.img : "";
-              applySig(sigBoxes[1], amSig, amSig ? todayDMY() : "");
-            }
+            // AM/RSM-এর সই শুধু তখনই বসে যখন ফর্মে "স্বাক্ষর করুন" চেপে
+            // সেভ করা হয়েছে (data.signatureAm / data.signatureRsm) — আগে
+            // থেকে নিজে নিজে বসে না
+            applySig(sigBoxes[1], data.signatureAm, data.signatureDate);
             // Signature of RSM — আলাদা ফুটারের প্রথম ঘর
             const rsmBox = pg.form.querySelector(".sign.rsm > div:first-child");
-            if (data.signatureRsm) {
-              applySig(rsmBox, data.signatureRsm, data.signatureDate);
-            } else {
-              const rsmSig = vs && vs.kind === "rsm" ? vs.img : "";
-              applySig(rsmBox, rsmSig, rsmSig ? todayDMY() : "");
+            applySig(rsmBox, data.signatureRsm, data.signatureDate);
+            // Replacement given date and Signature of Depot Manager — RSM
+            // ফুটারের শেষ ঘর; DM সই করলে সইয়ের সাথে সই করার তারিখও বসে
+            const dmBox = pg.form.querySelector(".sign.rsm > div.depot");
+            applySig(dmBox, data.signatureDm, data.signatureDate);
+            if (dmBox && data.signatureDm && data.signedDmAt) {
+              const dd = new Date(data.signedDmAt);
+              if (!isNaN(dd)) {
+                const dt = document.createElement("span");
+                dt.className = "sig-date";
+                dt.textContent =
+                  String(dd.getDate()).padStart(2, "0") +
+                  "/" +
+                  String(dd.getMonth() + 1).padStart(2, "0") +
+                  "/" +
+                  dd.getFullYear();
+                dmBox.appendChild(dt);
+              }
             }
             const b = pg.form.querySelector(".inv-no-badge");
             if (b) {
@@ -5326,6 +5567,7 @@
               isAdmin || isSupervisor() ? "" : getTodaySignature(),
             signatureAm: isAreaManager() ? getTodaySignature() : "",
             signatureRsm: isRsm() ? getTodaySignature() : "",
+            signatureDm: isDepotManager() ? getTodaySignature() : "",
             signatureDate: isAdmin || !getTodaySignature() ? "" : todayDMY(),
           };
         }
@@ -6000,6 +6242,7 @@
               signatureMpo: pending.signatureMpo || "",
               signatureAm: pending.signatureAm || "",
               signatureRsm: pending.signatureRsm || "",
+              signatureDm: pending.signatureDm || "",
               signatureDate: pending.signatureDate || "",
               invoiceNo: pending.invoiceNo,
               savedAt: now.toISOString(),
@@ -6090,6 +6333,8 @@
           // Generate/All Print সবার জন্য উন্মুক্ত, কিন্তু Summary (ও তার
           // ভেতরের Post) শুধু Admin-এর জন্যই দেখা যাবে।
           $("rdSummaryBtn").hidden = !isAdmin;
+          $("rdPostedBtn").hidden = !isAdmin;
+          updateReportTitle();
           reportDlg.showModal();
         };
         $("rdClose").onclick = () => reportDlg.close();
@@ -6136,7 +6381,22 @@
               box.checked = checked;
             });
         };
-        async function generateReport() {
+        let reportCache = null;
+        function setSelectOptions(sel, firstLabel, items, cur) {
+          sel.replaceChildren();
+          const first = document.createElement("option");
+          first.value = "";
+          first.textContent = firstLabel;
+          sel.appendChild(first);
+          items.forEach(([value, label]) => {
+            const o = document.createElement("option");
+            o.value = value;
+            o.textContent = label;
+            sel.appendChild(o);
+          });
+          sel.value = items.some(([v]) => v === cur) ? cur : "";
+        }
+        async function generateReport(useCache) {
           const fromValue = $("rdFrom").value;
           const toValue = $("rdTo").value;
           const status = $("rdStatus");
@@ -6180,7 +6440,10 @@
           $("rdRows").replaceChildren();
           lastReportEntries = [];
           try {
-            const results = await Promise.all(
+            const results =
+              useCache && reportCache
+                ? reportCache
+                : await Promise.all(
               dates.map(async (date) => {
                 try {
                   const docs = await firestoreListDocs(expiryPath(date));
@@ -6190,8 +6453,9 @@
                 }
               }),
             );
+            reportCache = results;
             const failed = results.find((result) => result.error);
-            const entries = [];
+            let entries = [];
             // Admin সব IPI-এর ডাটা দেখতে পাবে; non-admin শুধু নিজের IPI No
             // (যেটা দিয়ে অ্যাপ ওপেন/লগইন করা হয়েছে) দিয়ে সেভ করা এন্ট্রিগুলোই
             // দেখবে। প্রতিটি এন্ট্রির মালিকের IPI No fields.mpo-এর ভেতরে
@@ -6201,6 +6465,19 @@
             // (এন্ট্রিতে সেভ থাকা employeeInfo.amIpi / areaName মিলিয়ে;
             // পুরনো এন্ট্রিতে employeeInfo না থাকলে AM-এর নাম দিয়ে মেলানো হয়)
             const amMode = isAreaManager();
+            // Depot Manager: নিজের ডিপোর এন্ট্রি, কিন্তু শুধু RSM সই হওয়া গুলো
+            const dmMode = isDepotManager();
+            const myDepotName = (currentEmployeeInfo.depotName || "")
+              .trim()
+              .toUpperCase();
+            function entryUnderMyDepot(entry) {
+              const info = (entry && entry.employeeInfo) || {};
+              if (!entry || !entry.signatureRsm) return false;
+              // Office_Staff রেকর্ডে ডিপো-নাম থাকে না; সেক্ষেত্রে এই (Dinajpur)
+              // ডাটাবেসের সব RSM-সই-হওয়া এন্ট্রিই তার
+              if (!myDepotName || !info.depotName) return true;
+              return String(info.depotName).trim().toUpperCase() === myDepotName;
+            }
             const myAmName = ($("de_am").value || currentEmployeeInfo.amName || "")
               .trim()
               .toUpperCase();
@@ -6243,24 +6520,147 @@
                   // Summary মোডে যেগুলো আগে "Post" করা হয়ে গেছে, সেগুলো আর
                   // Summary টেবিলে দেখানো হয় না (raw/"Generate" মোডে সব
                   // এন্ট্রিই দেখা যাবে, যেমন আগে ছিল)।
-                  if (reportMode === "summary" && data.posted) return;
+                  // Admin-এর Generate/Summary-তে Post হয়ে যাওয়া এন্ট্রি আর আসে না;
+                  // সেগুলো আলাদা "Posted" বাটনে (reportMode = "posted") দেখা যায়।
+                  if (reportMode === "posted") {
+                    if (!data.posted) return;
+                  } else if (data.posted && (reportMode === "summary" || isAdmin))
+                    return;
                   if (
                     myIpi &&
                     entryOwnerIpi(data) !== myIpi &&
                     !(amMode && entryUnderMyArea(data)) &&
-                    !(rsmMode && entryUnderMyRegion(data))
+                    !(rsmMode && entryUnderMyRegion(data)) &&
+                    !(dmMode && entryUnderMyDepot(data))
                   )
                     return;
                   entries.push({ date, key: id, entry: data });
                 }
               });
             });
+            // ---- AM/RSM ফিল্টার: Area (শুধু RSM), Territory, স্বাক্ষরের অবস্থা ----
+            const supMode = amMode || rsmMode || dmMode;
+            const filterMode = supMode || isAdmin;
+            const reportBaseHadData = entries.length > 0;
+            const infoOf = (e) => e.entry.employeeInfo || {};
+            const areaKey = (e) => infoOf(e).areaName || "Area অজানা";
+            const terrKey = (e) =>
+              String(infoOf(e).territoryCode || infoOf(e).territoryName || "-");
+            const terrLabel = (e) =>
+              [infoOf(e).territoryCode, infoOf(e).territoryName]
+                .filter((v) => v && String(v).trim())
+                .join(" - ") || "Territory অজানা";
+            const isSignedByMe = (e) =>
+              dmMode
+                ? !!e.entry.signatureDm
+                : rsmMode
+                  ? !!e.entry.signatureRsm
+                  : !!e.entry.signatureAm;
+            // Admin-এর জন্য ধাপ: AM-এর কাছে (AM সই বাকি) → RSM-এর কাছে (AM
+            // সই করেছে, RSM বাকি) → সম্পূর্ণ (দুজনেই সই করেছে)
+            const stageOf = (e) =>
+              !e.entry.signatureAm
+                ? "am"
+                : !e.entry.signatureRsm
+                  ? "rsm"
+                  : !e.entry.signatureDm
+                    ? "dm"
+                    : "done";
+            if (filterMode) {
+              if (!useCache) {
+                $("rdArea").value = "";
+                $("rdTerr").value = "";
+                const signSel = $("rdSign");
+                signSel.replaceChildren();
+                (isAdmin
+                  ? [
+                      ["all", "সব"],
+                      ["am", "AM-এর কাছে (সই বাকি)"],
+                      ["rsm", "RSM-এর কাছে (সই বাকি)"],
+                      ["dm", "Depot Manager-এর কাছে (সই বাকি)"],
+                      ["done", "সম্পূর্ণ"],
+                    ]
+                  : [
+                      ["all", "সব"],
+                      ["unsigned", "স্বাক্ষরহীন"],
+                      ["signed", "স্বাক্ষরিত"],
+                    ]
+                ).forEach(([v, t]) => {
+                  const o = document.createElement("option");
+                  o.value = v;
+                  o.textContent = t;
+                  signSel.appendChild(o);
+                });
+                signSel.value = "all";
+              }
+              $("rdAreaWrap").hidden = !(rsmMode || dmMode || isAdmin);
+              $("rdFilters").hidden = $("rdAreaWrap").hidden;
+              $("rdTerrWrap").hidden = false;
+              $("rdSignWrap").hidden =
+                !(amMode || dmMode || isAdmin) || reportMode === "summary";
+              // RSM: "Generate" মোডে শুধু যেগুলোতে তার সই এখনো পড়েনি
+              const signOk = (e) => {
+                if (isAdmin) {
+                  const v = $("rdSign").value;
+                  return reportMode === "summary" || v === "all" || v === stageOf(e);
+                }
+                if (rsmMode) return reportMode === "summary" || !isSignedByMe(e);
+                if (reportMode === "summary") return true;
+                const v = $("rdSign").value;
+                return v === "unsigned"
+                  ? !isSignedByMe(e)
+                  : v === "signed"
+                    ? isSignedByMe(e)
+                    : true;
+              };
+              const afterSign = entries.filter(signOk);
+              if (rsmMode || dmMode || isAdmin) {
+                const areas = Array.from(new Set(afterSign.map(areaKey))).sort();
+                setSelectOptions(
+                  $("rdArea"),
+                  "সব Area (" + areas.length + ")",
+                  areas.map((a) => [a, a]),
+                  $("rdArea").value,
+                );
+              }
+              const areaSel =
+                rsmMode || dmMode || isAdmin ? $("rdArea").value : "";
+              const forTerr = areaSel
+                ? afterSign.filter((e) => areaKey(e) === areaSel)
+                : afterSign;
+              const terrMap = new Map();
+              forTerr.forEach((e) => terrMap.set(terrKey(e), terrLabel(e)));
+              const terrItems = Array.from(terrMap.entries()).sort((a, b) =>
+                a[1].localeCompare(b[1]),
+              );
+              setSelectOptions(
+                $("rdTerr"),
+                "সব Territory (" + terrItems.length + ")",
+                terrItems,
+                $("rdTerr").value,
+              );
+              const terrSel = $("rdTerr").value;
+              entries = forTerr.filter((e) => !terrSel || terrKey(e) === terrSel);
+            } else {
+              $("rdFilters").hidden = true;
+              $("rdTerrWrap").hidden = true;
+              $("rdSignWrap").hidden = true;
+            }
+            // Verification কলাম (AM / RSM / DM / POST) — MPO, AM, RSM, DM, Admin সবার জন্য
+            document.querySelectorAll("#reportDlg .rd-ver-group").forEach((el) => {
+              el.hidden = false;
+            });
+            $("rdHeadRow2").hidden = false;
+            document.querySelectorAll("#reportDlg th.rd-h1").forEach((el) => {
+              el.rowSpan = 2;
+            });
+            $("rdGrandTail").colSpan = 5;
             const areaOf = (e) =>
               (e.entry.employeeInfo && e.entry.employeeInfo.areaName) ||
               "Area অজানা";
             entries.sort(
               (left, right) =>
-                (rsmMode
+                (rsmMode || dmMode
                   ? areaOf(left).localeCompare(areaOf(right)) ||
                     String(
                       (left.entry.employeeInfo || {}).territoryCode || "",
@@ -6306,7 +6706,9 @@
                 entry.invoiceNo || "-",
                 chemist,
                 (fields.mpo || "-") +
-                  (rsmMode && entry.employeeInfo && entry.employeeInfo.territoryName
+                  ((rsmMode || dmMode || isAdmin) &&
+                  entry.employeeInfo &&
+                  entry.employeeInfo.territoryName
                     ? " (" + entry.employeeInfo.territoryName + ")"
                     : ""),
                 String(Math.round(entryValue)),
@@ -6325,10 +6727,26 @@
               );
               actionCell.appendChild(viewButton);
               rowElement.appendChild(actionCell);
+              {
+                // Verification: সই থাকলে "Seen ✓", না থাকলে "Unseen"; POST হলে "Posted ✓"
+                const verCell = (ok, yes, no) => {
+                  const td = document.createElement("td");
+                  td.className = "rd-ver";
+                  const sp = document.createElement("span");
+                  sp.className = ok ? "rd-ver-ok" : no === "Unseen" ? "rd-ver-no" : "rd-ver-off";
+                  sp.textContent = ok ? yes + " ✓" : no;
+                  td.appendChild(sp);
+                  return td;
+                };
+                rowElement.appendChild(verCell(!!entry.signatureAm, "Seen", "Unseen"));
+                rowElement.appendChild(verCell(!!entry.signatureRsm, "Seen", "Unseen"));
+                rowElement.appendChild(verCell(!!entry.signatureDm, "Seen", "Unseen"));
+                rowElement.appendChild(verCell(!!entry.posted, "Posted", "Progress"));
+              }
               return rowElement;
             });
             let finalRows = reportRows;
-            if (rsmMode) {
+            if (rsmMode || dmMode) {
               // এরিয়া ভিত্তিক গ্রুপ: প্রতিটি এরিয়ার আগে হেডার রো (সংখ্যা ও মোট)
               const groups = new Map();
               entries.forEach((e, i) => {
@@ -6342,7 +6760,7 @@
               groups.forEach((g, a) => {
                 const tr = document.createElement("tr");
                 const td = document.createElement("td");
-                td.colSpan = 7;
+                td.colSpan = 11;
                 td.style.cssText =
                   "background:#e8eef8;font-weight:700;text-align:left";
                 td.textContent =
@@ -6367,7 +6785,11 @@
             lastReportEntries = entries.map(({ date, key }) => ({ date, key }));
             $("rdActions").hidden = entries.length === 0;
             $("rdPrintAll").textContent =
-              reportMode === "summary" ? "Summary View/Print" : "All Print";
+              reportMode === "summary"
+                ? "Summary View/Print"
+                : supMode || isAdmin
+                  ? "View / Print"
+                  : "All Print";
             if (failed) {
               status.className = "rd-status err";
               status.textContent =
@@ -6377,7 +6799,11 @@
             } else {
               status.textContent = entries.length
                 ? ""
-                : "এই তারিখ রেঞ্জে কোনো সেভ করা এন্ট্রি পাওয়া যায়নি।";
+                : filterMode && reportBaseHadData
+                  ? "এই ফিল্টারে দেখানোর মতো কোনো এন্ট্রি নেই।"
+                  : reportMode === "posted"
+                    ? "এই তারিখ রেঞ্জে কোনো Posted এন্ট্রি নেই।"
+                    : "এই তারিখ রেঞ্জে কোনো সেভ করা এন্ট্রি পাওয়া যায়নি।";
             }
           } finally {
             generateButton.disabled = false;
@@ -6385,6 +6811,7 @@
         }
         $("rdGenerate").onclick = () => {
           reportMode = "raw";
+          updateReportTitle();
           generateReport();
         };
 
@@ -6394,8 +6821,80 @@
         // এন্ট্রিগুলো Summary ফরম্যাটে ভিউ হবে — তখন প্রিন্ট করা যাবে। =====
         $("rdSummaryBtn").onclick = () => {
           reportMode = "summary";
+          updateReportTitle();
           generateReport();
         };
+        // Posted: Post হয়ে যাওয়া এন্ট্রিগুলো আলাদা তালিকায় (শুধু Admin)
+        $("rdPostedBtn").onclick = () => {
+          reportMode = "posted";
+          updateReportTitle();
+          generateReport();
+        };
+        // Area বদলালে Territory তালিকা নতুন করে সাজাতে হবে
+        $("rdArea").onchange = () => {
+          $("rdTerr").value = "";
+          generateReport(true);
+        };
+        $("rdTerr").onchange = () => generateReport(true);
+        $("rdSign").onchange = () => generateReport(true);
+
+        // ===== ফর্ম ভিউ পেজে "স্বাক্ষর করুন" (শুধু AM/RSM) =====
+        // লগইন করা AM/RSM-এর আজকের সই এই ডিভাইসে আছে (প্রবেশের সময়ই দেওয়া),
+        // বাটনে চাপলে খোলা ফর্মগুলোর মধ্যে যেগুলো তার এরিয়া/রিজিয়নের এবং
+        // এখনো তার স্তরের সই পড়েনি, সেগুলোতে সই বসে ও Firebase-এ সেভ হয়
+        // (তাই রিপোর্টে সেগুলো আর "স্বাক্ষরহীন" থাকে না)।
+        function setupSignButton(refs) {
+          const btn = $("viewSignBtn");
+          const stat = $("viewSignStatus");
+          const info = refs
+            .map((r) => ({ r, vs: viewerSupervisor(r.entry) }))
+            .filter((x) => x.vs);
+          if (!info.length) return;
+          const lvlOf = (vs) =>
+            vs.kind === "dm" ? "Dm" : vs.kind === "rsm" ? "Rsm" : "Am";
+          const pending = () =>
+            info.filter((x) => !x.r.entry["signature" + lvlOf(x.vs)]);
+          btn.hidden = false;
+          const refresh = () => {
+            const n = pending().length;
+            btn.disabled = n === 0;
+            btn.textContent = n === 0 ? "স্বাক্ষরিত ✓" : "স্বাক্ষর করুন";
+          };
+          refresh();
+          btn.onclick = async () => {
+            const todo = pending();
+            if (!todo.length) return;
+            btn.disabled = true;
+            stat.style.color = "#1a3f7a";
+            stat.innerHTML =
+              '<span class="inline-spinner" aria-hidden="true"></span>স্বাক্ষর হচ্ছে…';
+            let fail = 0;
+            for (const x of todo) {
+              const l = lvlOf(x.vs);
+              try {
+                await firestoreSetDoc(x.r.path, {
+                  ...x.r.entry,
+                  ["signature" + l]: x.vs.img,
+                  ["signed" + l + "At"]: new Date().toISOString(),
+                  ["signed" + l + "By"]: x.vs.ipi || "",
+                });
+                x.r.entry["signature" + l] = x.vs.img;
+              } catch (e) {
+                fail += 1;
+              }
+            }
+            if (fail) {
+              stat.style.color = "#b00020";
+              stat.textContent =
+                fail + "টি ফর্মে স্বাক্ষর হয়নি — ইন্টারনেট/সার্ভার সমস্যা।";
+              btn.disabled = false;
+              return;
+            }
+            stat.textContent = "স্বাক্ষর সম্পন্ন।";
+            // ফর্মে সই দেখাতে পেজ আবার লোড হয় (URL/সিলেকশন একই থাকে)
+            setTimeout(() => location.reload(), 400);
+          };
+        }
 
         // AM আজকের সই না দিয়ে থাকলে প্রিন্টে "Signature of AM" ফাঁকা যেত,
         // তাই View/Print-এর আগে সইয়ের প্যাড খুলে সই নেওয়া হয়
@@ -6469,6 +6968,7 @@
           showPage("none");
           $("viewFormPrint").hidden = true;
           $("backToReport").hidden = true;
+          updateReportTitle();
           reportDlg.showModal();
         };
 
@@ -6927,8 +7427,48 @@
         function isRsm() {
           return !isAdmin && RSM_TEAM.test(currentEmployeeInfo.team || "");
         }
+        // ---- Depot Manager: TEAM বা DESIGNATION-এ "Depot" থাকলে সে Depot Manager।
+        // সে নিজের ডিপোর (DEPOT NAME) এন্ট্রি দেখবে — কিন্তু শুধু সেগুলোই যেগুলোতে
+        // MPO, AM ও RSM সবার সই হয়ে গেছে। তার সই ফরমের "Replacement given date
+        // and Signature of Depot Manager" ঘরে বসবে ----
+        function isDepotManager() {
+          return (
+            !isAdmin &&
+            !isAreaManager() &&
+            !isRsm() &&
+            (DM_ROLE.test(currentEmployeeInfo.team || "") ||
+              DM_ROLE.test(currentEmployeeInfo.designation || ""))
+          );
+        }
         function isSupervisor() {
-          return isAreaManager() || isRsm();
+          return isAreaManager() || isRsm() || isDepotManager();
+        }
+        // Report ডায়ালগের শিরোনামে দেখানো হয় এখন কোন প্যানেলে আছে
+        function roleLabel() {
+          if (isAdmin) return "ADMIN";
+          if (isDepotManager()) return "DEPOT MANAGER";
+          if (isRsm())
+            return /^zone/i.test(currentEmployeeInfo.team || "")
+              ? "ZONE"
+              : "REGION";
+          if (isAreaManager()) return "AM";
+          return "MPO";
+        }
+        function updateReportTitle() {
+          const t = $("rdTitle");
+          if (!t) return;
+          t.textContent = "Report ";
+          const b = document.createElement("span");
+          b.className = "rd-role-badge";
+          b.textContent = roleLabel();
+          t.appendChild(b);
+          if (typeof reportMode !== "undefined" && reportMode === "posted") {
+            const pb = document.createElement("span");
+            pb.className = "rd-role-badge";
+            pb.style.background = "#1b7a3d";
+            pb.textContent = "POSTED";
+            t.appendChild(pb);
+          }
         }
         function updateTerritoryFields() {
           $("de_group").textContent = currentEmployeeInfo.team || "-";
@@ -7856,7 +8396,45 @@
             if (!allCache) allCache = await getJSON(base);
             rec = match(allCache);
           }
+          // Field_Force-এ না পেলে অফিস স্টাফ (DINAJPUR/Office_Staff) দেখা হয় —
+          // Depot Manager এখানে থাকে: key "IPI-006552_নাম", ফিল্ড Designation /
+          // IPINo / NameOfEmployee। অন্য রেকর্ডের মতো পড়তে স্ট্যান্ডার্ড
+          // ফিল্ডে সাজিয়ে দেওয়া হয়
+          if (!rec) rec = await findOfficeStaff(ipi);
           return rec || null;
+        }
+        const OFFICE_STAFF_PATH = "DINAJPUR/Office_Staff";
+        async function findOfficeStaff(ipi) {
+          try {
+            const q =
+              "?orderBy=" +
+              encodeURIComponent('"$key"') +
+              "&startAt=" +
+              encodeURIComponent('"' + ipi + '"') +
+              "&endAt=" +
+              encodeURIComponent('"' + ipi + '\uf8ff"');
+            const data = await getJSON(
+              FB_DB + "/" + OFFICE_STAFF_PATH + ".json" + q,
+            );
+            const key = Object.keys(data || {}).find(
+              (k) => k === ipi || k.startsWith(ipi + "_"),
+            );
+            const o = key && data[key];
+            if (!o || typeof o !== "object") return null;
+            const recIpi = norm(pickAny(o, ["IPINO", "IPI NO"]) || ipi);
+            if (recIpi !== ipi) return null;
+            return {
+              "IPI NO": recIpi,
+              NAME:
+                pickAny(o, ["NAMEOFEMPLOYEE", "NAME OF EMPLOYEE", "NAME"]) ||
+                key.slice(ipi.length + 1),
+              DESIGNATION: pickAny(o, ["DESIGNATION"]),
+              TEAM: "",
+              _officeStaff: true,
+            };
+          } catch (e) {
+            return null;
+          }
         }
 
         // ---- Admin রেকর্ড খোঁজা: PRODUCT_DB-এর "DINAJPUR/Emp_Password"
@@ -7980,6 +8558,21 @@
             }
             const amInfo = await findAmInfo(rec);
             if (mine !== seq) return;
+            if (rec._officeStaff) {
+              // অফিস স্টাফ (Depot Manager): টেরিটরি/এরিয়া/ডিপো-নাম নেই
+              currentEmployeeInfo = {
+                ipi: pick(rec, "IPI NO") || ipi,
+                mpoName: name,
+                designation: pick(rec, "DESIGNATION"),
+                team: "",
+                officeStaff: true,
+              };
+              currentTerritoryCode = "";
+              updateTerritoryFields();
+              saveEmployee();
+              setSt("ok", "");
+              return;
+            }
             currentEmployeeInfo = {
               ipi: pick(rec, "IPI NO") || ipi,
               mpoName: name,
@@ -8410,6 +9003,7 @@
               showPage("saved");
               $("viewFormPrint").hidden = false;
               $("backToReport").hidden = true;
+              setupSignButton([{ path, entry }]);
             } catch (error) {
               document.body.innerHTML =
                 '<p style="padding:24px;font-family:sans-serif;font-size:15px">এন্ট্রি লোড করা যায়নি — ইন্টারনেট/সার্ভার সমস্যা।</p>';
@@ -8435,12 +9029,14 @@
             const stack = document.createElement("div");
             stack.id = "allPrintStack";
             let loadedAny = false;
+            const signRefs = [];
             for (const item of entries) {
               try {
                 const date = parseDateInput(item.date);
                 const path = expiryPath(date) + "/" + item.key;
                 const entry = await firestoreGetDoc(path);
                 if (!entry || typeof entry !== "object") continue;
+                signRefs.push({ path, entry });
                 populateSavedForm(entry);
                 const pageCount = Math.max(
                   1,
@@ -8471,6 +9067,7 @@
             if (window.fitPagesToScreen) window.fitPagesToScreen();
             $("viewFormPrint").hidden = false;
             $("backToReport").hidden = true;
+            setupSignButton(signRefs);
           })();
           return;
         }
@@ -8623,7 +9220,7 @@
               setSt("err", chemistLoadErrorText(error)),
             );
           }
-          if (!currentEmployeeInfo.ipi || !currentTerritoryCode) lookup();
+          if (!currentEmployeeInfo.ipi || (!currentTerritoryCode && !currentEmployeeInfo.officeStaff)) lookup();
         } else {
           showEmployeeSection();
         }
