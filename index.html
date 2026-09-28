@@ -108,6 +108,38 @@
         font-size: 12.5px;
         color: #555;
       }
+      #sigDlg .sig-mode-row {
+        display: flex;
+        justify-content: flex-end;
+        margin: -2px 0 8px;
+      }
+      #sigDlg #sigPenBtn {
+        font: inherit;
+        font-size: 12.5px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid #1a3f7a;
+        background: #eef2f8;
+        color: #1a3f7a;
+        cursor: pointer;
+      }
+      #sigDlg #sigPenBtn.active {
+        background: #1a3f7a;
+        color: #fff;
+      }
+      #sigDlg #sigPlaceholder {
+        border: 2px dashed #9aa7bd;
+        border-radius: 8px;
+        background: #f3f5f8;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 14px;
+        font-size: 12.5px;
+        color: #667;
+      }
       #sigDlg canvas {
         display: block;
         width: 100%;
@@ -3014,14 +3046,6 @@
             >
               Blank Form
             </button>
-            <button
-              type="button"
-              class="entry-blank-btn"
-              id="entrySign"
-              hidden
-            >
-              Signature
-            </button>
           </div>
         </header>
         <div class="db">
@@ -3319,6 +3343,12 @@
       <div class="sig-body">
         <h2 id="sigTitle">MPO সিগনেচার</h2>
         <p id="sigInfo"></p>
+        <div class="sig-mode-row">
+          <button type="button" id="sigPenBtn">✎ কলম দিয়ে সই দিন</button>
+        </div>
+        <div id="sigPlaceholder">
+          উপরে "✎ কলম দিয়ে সই দিন" চাপুন, অথবা নিচে ক্যামেরা/গ্যালারি থেকে সইয়ের ছবি দিন।
+        </div>
         <div id="sigCamWrap" hidden>
           <video id="sigVideo" playsinline muted autoplay></video>
           <div id="sigGuide"></div>
@@ -4118,7 +4148,6 @@
           setEntrySection("Chemist Information");
           // MPO সিগনেচার: Chemist Information-এ এলে, আজকের তারিখের সিগনেচার
           // না থাকলে (নতুন দিন/নতুন IPI) সিগনেচার প্যাড খুলবে। Admin-এর লাগে না।
-          $("entrySign").hidden = !!isAdmin;
           if (!isAdmin) {
             setTimeout(() => {
               if (dlg.open && !$("sigDlg").open && !getTodaySignature())
@@ -4332,8 +4361,9 @@
           const off = e.pointerType === "mouse" ? 0 : SIG_OFF;
           return { cx: e.clientX, cy: e.clientY - off };
         }
-        function sigPenTo(cx, cy) {
+        function sigPenTo(cx, cy, animate) {
           const pr = sigPad.getBoundingClientRect();
+          sigPen.style.transition = animate ? "transform .22s ease" : "none";
           // ছবির নিচের-বাঁ কোণ (২,৩৪) = কলমের ডগা
           sigPen.style.transform =
             "translate(" + (cx - pr.left - 2) + "px," + (cy - pr.top - 34) + "px)";
@@ -4348,11 +4378,12 @@
             y: Math.max(0, Math.min(sigCv.height, y)),
           };
         }
-        function sigPenRest() {
-          const r = sigCv.getBoundingClientRect(),
-            pr = sigPad.getBoundingClientRect();
+        // কলম এমনিতে বক্সের ওপরের-ডান কোণায় পার্ক করা থাকে; স্পর্শ করলেই ওখান
+        // থেকে উড়ে এসে সই শুরুর জায়গায় বসে, শেষে আবার কোণায় ফিরে যায়
+        function sigPenRest(animate) {
+          const r = sigCv.getBoundingClientRect();
           if (!r.width) return;
-          sigPenTo(pr.left + 30, r.top + r.height * 0.55);
+          sigPenTo(r.right - 14, r.top + 14, animate !== false);
         }
         sigStyle();
         sigPad.addEventListener("pointerdown", (e) => {
@@ -4364,7 +4395,7 @@
           sigDirty = true;
           $("sigErr").textContent = "";
           const t = sigTip(e);
-          sigPenTo(t.cx, t.cy);
+          sigPenTo(t.cx, t.cy, true);
           const p = sigPos(e);
           sigCtx.beginPath();
           sigCtx.moveTo(p.x, p.y);
@@ -4372,13 +4403,10 @@
           sigCtx.stroke();
         });
         sigPad.addEventListener("pointermove", (e) => {
+          if (!sigDrawing) return;
           const t = sigTip(e);
-          if (!sigDrawing) {
-            if (e.pointerType === "mouse") sigPenTo(t.cx, t.cy);
-            return;
-          }
           e.preventDefault();
-          sigPenTo(t.cx, t.cy);
+          sigPenTo(t.cx, t.cy, false);
           const p = sigPos(e);
           sigCtx.lineTo(p.x, p.y);
           sigCtx.stroke();
@@ -4386,11 +4414,15 @@
         ["pointerup", "pointercancel"].forEach((ev) =>
           sigPad.addEventListener(ev, () => {
             sigDrawing = false;
+            sigPenRest(true);
           }),
         );
         function openSignature(after) {
           sigAfter = after || null;
           sigClear();
+          sigPad.style.display = "none";
+          $("sigPlaceholder").style.display = "";
+          $("sigPenBtn").classList.remove("active");
           $("sigTitle").textContent = isRsm()
             ? "RSM সিগনেচার"
             : isAreaManager()
@@ -4425,7 +4457,7 @@
         });
         $("sigOk").addEventListener("click", () => {
           if (!sigDirty) {
-            $("sigErr").textContent = "আগে বক্সে সই করুন।";
+            $("sigErr").textContent = "আগে ওপরের \"কলম দিয়ে সই দিন\" বা ক্যামেরা/গ্যালারি বেছে সই করুন।";
             return;
           }
           storeSignature(sigCv.toDataURL("image/png"));
@@ -4434,7 +4466,6 @@
           sigAfter = null;
           if (cb) cb();
         });
-        $("entrySign").addEventListener("click", () => openSignature(null));
         function sigProcess(el, sx, sy, sw, sh) {
             sigClear();
             // ১) ছবি ছোট করে (সর্বোচ্চ ১০০০px) ধূসর করা
@@ -4574,6 +4605,8 @@
             return;
           }
           $("sigErr").textContent = "";
+          $("sigPlaceholder").style.display = "none";
+          $("sigPenBtn").classList.remove("active");
           camVideo.srcObject = camStream;
           sigPad.style.display = "none";
           camWrap.hidden = false;
@@ -4619,8 +4652,29 @@
             stopCamera();
           }
         }
+        $("sigPenBtn").addEventListener("click", () => {
+          // বাটনটা টগল: খোলা থাকলে চাপ দিলে বন্ধ হয়ে যায় (আগের সই থাকলে
+          // ক্যানভাসেই থেকে যায়, শুধু বক্সটা লুকানো হয়); বন্ধ থাকলে চাপ দিলে
+          // খোলে ও কলমের আইকন কোণা থেকে এসে জায়গামতো বসে
+          const isOpen = $("sigPenBtn").classList.contains("active");
+          if (isOpen) {
+            sigPad.style.display = "none";
+            $("sigPlaceholder").style.display = "";
+            $("sigPenBtn").classList.remove("active");
+            return;
+          }
+          stopCamera();
+          $("sigPlaceholder").style.display = "none";
+          sigPad.style.display = "";
+          $("sigPenBtn").classList.add("active");
+          requestAnimationFrame(() => sigPenRest(true));
+        });
         $("sigCamera").addEventListener("click", startCamera);
-        $("sigGallery").addEventListener("click", () => $("sigFile").click());
+        $("sigGallery").addEventListener("click", () => {
+          $("sigPlaceholder").style.display = "none";
+          $("sigPenBtn").classList.remove("active");
+          $("sigFile").click();
+        });
         $("sigSnap").addEventListener("click", captureGuide);
         $("sigCamCancel").addEventListener("click", stopCamera);
         sigDlg.addEventListener("close", stopCamera);
@@ -4635,6 +4689,8 @@
           };
           img.onerror = () => {
             $("sigErr").textContent = "ছবিটি পড়া যায়নি, আবার চেষ্টা করুন।";
+            $("sigPlaceholder").style.display = "none";
+            sigPad.style.display = "";
           };
           img.src = URL.createObjectURL(f);
         });
@@ -5411,9 +5467,15 @@
           ["ccode", "chemist", "addr"].forEach((k) => {
             $("de_" + k).value = "";
           });
+          // মোবাইলে View বাটন #deRows-এর ভেতরে থাকে; সারি মুছলে সেটাও DOM থেকে
+          // চলে যায় — তাই আগেই রেফারেন্স নিয়ে রাখা হচ্ছে (নাহলে এরর হয়ে রিসেট থেমে যায়)
+          const viewBtn = $("viewAdded");
+          const footerEl = document.querySelector("#entry footer.df");
+          if (viewBtn && list.contains(viewBtn) && footerEl)
+            footerEl.appendChild(viewBtn);
           list.innerHTML = "";
           list.classList.remove("view-all");
-          $("viewAdded").textContent = "View";
+          if (viewBtn) viewBtn.textContent = "View";
           $("rowNote").textContent = "";
           updateTotals();
           st.className = "ipiStatus";
@@ -5857,13 +5919,23 @@
         }
         function finishSave() {
           $sd.close();
-          clearDraft();
-          resetEntryForNext();
+          try {
+            clearDraft();
+          } catch (e) {}
+          try {
+            resetEntryForNext();
+          } catch (e) {
+            console.error("resetEntryForNext failed:", e);
+          }
           // একই টিক-এ একটা ডায়ালগ বন্ধ করে আরেকটা মডাল খুললে কিছু মোবাইল
           // ব্রাউজারে (বিশেষত iOS Safari/WebKit) ডায়ালগ রি-ওপেন নীরবে ফেইল
-          // হয়ে যায় — নিচের toolbar/blank page দেখা যায়। এক ফ্রেম পর খোলা
-          // হলে এই সমস্যা হয় না।
-          requestAnimationFrame(() => {
+          // হয়ে যায়। এক ফ্রেম পর খোলার চেষ্টা করলে বেশিরভাগ সময় ঠিক হয়ে
+          // যায়, কিন্তু কিছু কিছু মোবাইলে সেটাও প্রথমবার ব্যর্থ হতে দেখা
+          // গেছে — তাই আসলেই খুলেছে কি না যাচাই করে, না খুললে অল্প বিরতি
+          // দিয়ে কয়েকবার আবার চেষ্টা করা হয়।
+          let tries = 0;
+          function attempt() {
+            tries++;
             document.body.classList.add("de-open");
             if (!dlg.open) {
               try {
@@ -5872,12 +5944,21 @@
                 try {
                   dlg.close();
                 } catch (e2) {}
-                dlg.showModal();
+                try {
+                  dlg.showModal();
+                } catch (e3) {}
               }
             }
-            // Employee section আগে থেকেই ভরা, তাই সরাসরি Chemist Code-এ ফোকাস
-            $("de_ccode").focus();
-          });
+            requestAnimationFrame(() => {
+              if (dlg.open) {
+                // Employee section আগে থেকেই ভরা, তাই সরাসরি Chemist Code-এ ফোকাস
+                $("de_ccode").focus();
+              } else if (tries < 5) {
+                setTimeout(attempt, 100);
+              }
+            });
+          }
+          requestAnimationFrame(attempt);
         }
         async function runSave() {
           if (!pending || saving) return;
@@ -8269,6 +8350,19 @@
           }, 600);
         });
         $("de_ipi").addEventListener("change", () => {
+          // OK বাটনে চাপ দিলে বক্স থেকে ফোকাস সরে (blur) এই change ইভেন্টটাও
+          // ঘটে। IPI ততক্ষণে সফলভাবে খোঁজা হয়ে গিয়ে থাকলে ও কিছু বদলায়নি
+          // থাকলে আবার নতুন করে খোঁজা শুরু করার দরকার নেই — এটাই আগে পুরো
+          // তথ্য মুহূর্তের জন্য মুছে "খোঁজা হচ্ছে…" দেখাত ও OK দুইবার
+          // চাপতে হতো (আসলে একবারই যথেষ্ট, শুধু বাড়তি খোঁজাটা শেষ হওয়া
+          // পর্যন্ত অপেক্ষা করতে হতো)।
+          const val = norm($("de_ipi").value.trim());
+          const already =
+            !lookupTimerActive &&
+            !lookupInFlight &&
+            currentEmployeeInfo.ipi &&
+            norm(currentEmployeeInfo.ipi) === val;
+          if (already) return;
           clearTimeout(timer);
           lookupTimerActive = false;
           lookupRun = lookup();
