@@ -963,7 +963,7 @@
       }
       #reportDlg .rd-filters {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: flex-end;
         gap: 8px;
         margin-bottom: 10px;
@@ -973,7 +973,8 @@
         display: none;
       }
       #reportDlg .rd-filters .rd-field {
-        flex: 1 1 130px;
+        flex: 1 1 0;
+        min-width: 0;
       }
       #reportDlg .rd-filters .f {
         color: #333;
@@ -2309,19 +2310,58 @@
       }
       #reportDlg .rd-summary {
         display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin-bottom: 10px;
-        padding: 8px 12px;
+        flex-wrap: nowrap;
+        gap: 8px;
+        min-width: 0;
+      }
+      #reportDlg .rd-summary[hidden] {
+        display: none;
+      }
+      #reportDlg .rd-sum-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 4px 12px;
         border: 1px solid #cbd2da;
         border-radius: 6px;
         background: #f3f5f8;
-        font-size: 13px;
+        white-space: nowrap;
+        line-height: 1.25;
+      }
+      #reportDlg .rd-sum-l {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #1a3f7a;
+      }
+      #reportDlg .rd-sum-v {
+        font-size: 15px;
+        font-weight: 700;
+        color: #111;
       }
       #reportDlg .rd-table-wrap {
-        overflow: auto;
+        overflow-x: scroll;
+        overflow-y: scroll;
         flex: 1 1 auto;
         min-height: 0;
+        scrollbar-width: auto;
+        scrollbar-color: #1a3f7a #e3e8ef;
+      }
+      /* স্ক্রোল বার সবসময় দেখা যাবে (মোবাইল/ম্যাকে অটো-হাইড হবে না) */
+      #reportDlg .rd-table-wrap::-webkit-scrollbar {
+        width: 14px;
+        height: 14px;
+      }
+      #reportDlg .rd-table-wrap::-webkit-scrollbar-track {
+        background: #e3e8ef;
+        border-radius: 7px;
+      }
+      #reportDlg .rd-table-wrap::-webkit-scrollbar-thumb {
+        background: #1a3f7a;
+        border-radius: 7px;
+        border: 2px solid #e3e8ef;
+      }
+      #reportDlg .rd-table-wrap::-webkit-scrollbar-corner {
+        background: #e3e8ef;
       }
       #reportDlg table {
         width: 100%;
@@ -2426,7 +2466,7 @@
         justify-content: flex-start;
         flex-wrap: nowrap;
         gap: 6px;
-        align-items: flex-end;
+        align-items: center;
         margin-bottom: 10px;
         padding-bottom: 10px;
         border-bottom: 1px solid #ddd;
@@ -2736,9 +2776,16 @@
           font-size: 12px;
         }
         #reportDlg .rd-summary {
-          gap: 8px;
-          padding: 6px 8px;
-          font-size: 11px;
+          gap: 4px;
+        }
+        #reportDlg .rd-sum-item {
+          padding: 3px 6px;
+        }
+        #reportDlg .rd-sum-l {
+          font-size: 9.5px;
+        }
+        #reportDlg .rd-sum-v {
+          font-size: 12px;
         }
         #reportDlg .rd-actions button {
           padding: 7px 10px;
@@ -3643,24 +3690,11 @@
             <span class="f">Area</span>
             <select id="rdArea"></select>
           </label>
-        </div>
-        <p class="rd-status" id="rdStatus" role="status" aria-live="polite"></p>
-        <div class="rd-summary" id="rdSummary" hidden>
-          <span><strong>মোট এন্ট্রি:</strong> <span id="rdCount">0</span></span>
-          <span
-            ><strong>মোট Quantity:</strong> <span id="rdSumQty">0</span></span
-          >
-          <span>
-            <strong>মোট Invoice Value:</strong>
-            <span id="rdSumValue">0</span>
-          </span>
-        </div>
-        <footer>
-          <label class="rd-field rd-foot-field" id="rdTerrWrap" hidden>
+          <label class="rd-field" id="rdTerrWrap" hidden>
             <span class="f">Territory</span>
             <select id="rdTerr"></select>
           </label>
-          <label class="rd-field rd-foot-field" id="rdSignWrap" hidden>
+          <label class="rd-field" id="rdSignWrap" hidden>
             <span class="f">স্বাক্ষর</span>
             <select id="rdSign">
               <option value="all">সব</option>
@@ -3668,6 +3702,23 @@
               <option value="signed">স্বাক্ষরিত</option>
             </select>
           </label>
+        </div>
+        <p class="rd-status" id="rdStatus" role="status" aria-live="polite"></p>
+        <footer>
+          <div class="rd-summary" id="rdSummary" hidden>
+            <div class="rd-sum-item">
+              <span class="rd-sum-l">Total Party</span>
+              <span class="rd-sum-v" id="rdCount">0</span>
+            </div>
+            <div class="rd-sum-item">
+              <span class="rd-sum-l">Total pcs</span>
+              <span class="rd-sum-v" id="rdSumQty">0</span>
+            </div>
+            <div class="rd-sum-item">
+              <span class="rd-sum-l">Total Value</span>
+              <span class="rd-sum-v" id="rdSumValue">0</span>
+            </div>
+          </div>
           <button type="button" id="rdClose">Close</button>
           <div class="rd-actions" id="rdActions" hidden>
             <button type="button" id="rdPrintAll">All Print</button>
@@ -6594,7 +6645,7 @@
                 signSel.value = "all";
               }
               $("rdAreaWrap").hidden = !(rsmMode || dmMode || isAdmin);
-              $("rdFilters").hidden = $("rdAreaWrap").hidden;
+              $("rdFilters").hidden = false;
               $("rdTerrWrap").hidden = false;
               $("rdSignWrap").hidden =
                 !(amMode || dmMode || isAdmin) || reportMode === "summary";
@@ -6728,20 +6779,24 @@
               actionCell.appendChild(viewButton);
               rowElement.appendChild(actionCell);
               {
-                // Verification: সই থাকলে "Seen ✓", না থাকলে "Unseen"; POST হলে "Posted ✓"
-                const verCell = (ok, yes, no) => {
+                // Verification: সই থাকলে "Sign ✓", না থাকলে "Pending"; POST হলে "Final ✓ / Approved"
+                const verCell = (ok, yes, no, extra) => {
                   const td = document.createElement("td");
                   td.className = "rd-ver";
                   const sp = document.createElement("span");
-                  sp.className = ok ? "rd-ver-ok" : no === "Unseen" ? "rd-ver-no" : "rd-ver-off";
-                  sp.textContent = ok ? yes + " ✓" : no;
+                  sp.className = ok ? "rd-ver-ok" : no === "Pending" ? "rd-ver-no" : "rd-ver-off";
+                  sp.appendChild(document.createTextNode(ok ? yes + " ✓" : no));
+                  if (ok && extra) {
+                    sp.appendChild(document.createElement("br"));
+                    sp.appendChild(document.createTextNode(extra));
+                  }
                   td.appendChild(sp);
                   return td;
                 };
-                rowElement.appendChild(verCell(!!entry.signatureAm, "Seen", "Unseen"));
-                rowElement.appendChild(verCell(!!entry.signatureRsm, "Seen", "Unseen"));
-                rowElement.appendChild(verCell(!!entry.signatureDm, "Seen", "Unseen"));
-                rowElement.appendChild(verCell(!!entry.posted, "Posted", "Progress"));
+                rowElement.appendChild(verCell(!!entry.signatureAm, "Sign", "Pending"));
+                rowElement.appendChild(verCell(!!entry.signatureRsm, "Sign", "Pending"));
+                rowElement.appendChild(verCell(!!entry.signatureDm, "Sign", "Pending"));
+                rowElement.appendChild(verCell(!!entry.posted, "Final", "Progress", "Approved"));
               }
               return rowElement;
             });
