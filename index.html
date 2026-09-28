@@ -61,6 +61,84 @@
         display: flex;
         flex-direction: column;
       }
+      .sign:not(.rsm) > div:first-child {
+        position: relative;
+      }
+      .sign .sig-img {
+        position: absolute;
+        left: 50%;
+        bottom: 100%;
+        transform: translateX(-50%);
+        height: 15mm;
+        max-width: 58mm;
+        object-fit: contain;
+        margin-bottom: 1px;
+        pointer-events: none;
+      }
+      dialog#sigDlg {
+        width: min(560px, 96vw);
+        max-width: 96vw;
+        border: 0;
+        border-radius: 10px;
+        padding: 0;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      }
+      dialog#sigDlg::backdrop {
+        background: rgba(0, 0, 0, 0.55);
+      }
+      #sigDlg .sig-body {
+        padding: 14px 16px 16px;
+      }
+      #sigDlg h2 {
+        margin: 0 0 4px;
+        font-size: 17px;
+        color: #1a3f7a;
+      }
+      #sigDlg #sigInfo {
+        margin: 0 0 8px;
+        font-size: 12.5px;
+        color: #555;
+      }
+      #sigDlg canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 600 / 220;
+        background: #fff;
+        border: 2px dashed #9aa7bd;
+        border-radius: 8px;
+        touch-action: none;
+        cursor: crosshair;
+      }
+      #sigDlg .sig-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      #sigDlg .sig-actions .sp {
+        flex: 1;
+      }
+      #sigDlg button {
+        font: inherit;
+        font-size: 14px;
+        padding: 8px 14px;
+        border-radius: 6px;
+        border: 1px solid #1a3f7a;
+        background: #eef2f8;
+        color: #1a3f7a;
+        cursor: pointer;
+      }
+      #sigDlg button.ok {
+        background: #1a3f7a;
+        color: #fff;
+      }
+      #sigDlg #sigErr {
+        min-height: 16px;
+        margin-top: 6px;
+        font-size: 12.5px;
+        color: #c81e1e;
+      }
       .sign {
         margin-top: auto;
         padding-top: 16mm;
@@ -2848,6 +2926,14 @@
             >
               Blank Form
             </button>
+            <button
+              type="button"
+              class="entry-blank-btn"
+              id="entrySign"
+              hidden
+            >
+              Signature
+            </button>
           </div>
         </header>
         <div class="db">
@@ -3139,6 +3225,23 @@
           </button>
         </footer>
       </form>
+    </dialog>
+
+    <dialog id="sigDlg" aria-labelledby="sigTitle">
+      <div class="sig-body">
+        <h2 id="sigTitle">MPO সিগনেচার</h2>
+        <p id="sigInfo"></p>
+        <canvas id="sigCanvas" width="600" height="220"></canvas>
+        <div id="sigErr" role="alert"></div>
+        <div class="sig-actions">
+          <button type="button" id="sigClear">মুছুন</button>
+          <button type="button" id="sigCamera">ক্যামেরা/ছবি</button>
+          <input type="file" id="sigFile" accept="image/*" capture="environment" hidden />
+          <span class="sp"></span>
+          <button type="button" id="sigCancel" hidden>বাতিল</button>
+          <button type="button" id="sigOk" class="ok">সেভ</button>
+        </div>
+      </div>
     </dialog>
 
     <dialog id="saveDlg" aria-labelledby="sdTitle">
@@ -3907,6 +4010,15 @@
             .querySelectorAll(".chemist-section")
             .forEach((el) => el.classList.remove("pre-ok-hidden"));
           setEntrySection("Chemist Information");
+          // MPO সিগনেচার: Chemist Information-এ এলে, আজকের তারিখের সিগনেচার
+          // না থাকলে (নতুন দিন/নতুন IPI) সিগনেচার প্যাড খুলবে। Admin-এর লাগে না।
+          $("entrySign").hidden = !!isAdmin;
+          if (!isAdmin) {
+            setTimeout(() => {
+              if (dlg.open && !$("sigDlg").open && !getTodaySignature())
+                openSignature(null);
+            }, 80);
+          }
         }
         function returnToChemistSection() {
           showPage("none");
@@ -3920,7 +4032,20 @@
           if (!dlg.open) dlg.showModal();
           setTimeout(() => $("de_ccode").focus(), 50);
         }
-        function tryEmployeeOk() {
+        async function tryEmployeeOk() {
+          // নতুন IPI লেখার পর খোঁজা (lookup) শেষ হওয়ার আগেই OK চাপলে নাম/AM
+          // তখনও ফাঁকা থাকত, তাই প্রথমবার এরর আসত ও দ্বিতীয়বার চাপতে হতো।
+          // এখন চলমান/অপেক্ষমাণ খোঁজা শেষ হওয়া পর্যন্ত অপেক্ষা করে তারপর যাচাই।
+          if (lookupTimerActive) {
+            clearTimeout(timer);
+            lookupTimerActive = false;
+            lookupRun = lookup();
+          }
+          if (lookupRun) {
+            try {
+              await lookupRun;
+            } catch (e) {}
+          }
           const ipi = $("de_ipi").value.trim();
           const mpo = $("de_mpo").value.trim();
           const am = $("de_am").value.trim();
@@ -3961,6 +4086,169 @@
           else $("de_ccode").focus();
         }
 
+        // ===== MPO সিগনেচার (দিনে একবার): আঙুল/মাউসে আঁকা বা ক্যামেরার ছবি =====
+        // আজকের তারিখ + এই IPI-এর সিগনেচার সেভ থাকলে আর চায় না; তারিখ বদলালে
+        // (বা অন্য IPI হলে) আবার নতুন করে নেয়। সেভ হওয়া এন্ট্রিতে signatureMpo
+        // ফিল্ডে ছোট PNG (data URL) হিসেবে যায় এবং প্রিন্টে "Signature of MPO"-র
+        // দাগের ওপরে বসে।
+        const SIG_KEY = "formE_mpoSignature";
+        let sigMem = null;
+        function todayStr() {
+          const d = new Date();
+          return (
+            d.getFullYear() +
+            "-" +
+            String(d.getMonth() + 1).padStart(2, "0") +
+            "-" +
+            String(d.getDate()).padStart(2, "0")
+          );
+        }
+        function getTodaySignature() {
+          let o = sigMem;
+          try {
+            const raw = localStorage.getItem(SIG_KEY);
+            if (raw) o = JSON.parse(raw);
+          } catch (e) {}
+          if (
+            o &&
+            o.img &&
+            o.date === todayStr() &&
+            o.ipi === $("de_ipi").value.trim()
+          )
+            return o.img;
+          return "";
+        }
+        function storeSignature(img) {
+          sigMem = { date: todayStr(), ipi: $("de_ipi").value.trim(), img: img };
+          try {
+            localStorage.setItem(SIG_KEY, JSON.stringify(sigMem));
+          } catch (e) {}
+        }
+        const sigDlg = $("sigDlg"),
+          sigCv = $("sigCanvas"),
+          sigCtx = sigCv.getContext("2d");
+        let sigDrawing = false,
+          sigDirty = false,
+          sigAfter = null;
+        function sigStyle() {
+          sigCtx.lineWidth = 3.5;
+          sigCtx.lineCap = "round";
+          sigCtx.lineJoin = "round";
+          sigCtx.strokeStyle = "#111";
+        }
+        function sigClear() {
+          sigCtx.clearRect(0, 0, sigCv.width, sigCv.height);
+          sigDirty = false;
+          $("sigErr").textContent = "";
+        }
+        function sigPos(e) {
+          const r = sigCv.getBoundingClientRect();
+          return {
+            x: ((e.clientX - r.left) * sigCv.width) / r.width,
+            y: ((e.clientY - r.top) * sigCv.height) / r.height,
+          };
+        }
+        sigStyle();
+        sigCv.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          try {
+            sigCv.setPointerCapture(e.pointerId);
+          } catch (err) {}
+          sigDrawing = true;
+          sigDirty = true;
+          $("sigErr").textContent = "";
+          const p = sigPos(e);
+          sigCtx.beginPath();
+          sigCtx.moveTo(p.x, p.y);
+          sigCtx.lineTo(p.x + 0.1, p.y + 0.1);
+          sigCtx.stroke();
+        });
+        sigCv.addEventListener("pointermove", (e) => {
+          if (!sigDrawing) return;
+          e.preventDefault();
+          const p = sigPos(e);
+          sigCtx.lineTo(p.x, p.y);
+          sigCtx.stroke();
+        });
+        ["pointerup", "pointercancel", "pointerleave"].forEach((ev) =>
+          sigCv.addEventListener(ev, () => {
+            sigDrawing = false;
+          }),
+        );
+        function openSignature(after) {
+          sigAfter = after || null;
+          sigClear();
+          const d = new Date();
+          $("sigInfo").textContent =
+            "তারিখ: " +
+            String(d.getDate()).padStart(2, "0") +
+            "/" +
+            String(d.getMonth() + 1).padStart(2, "0") +
+            "/" +
+            d.getFullYear() +
+            " — নিচের বক্সে সই করুন। আজকের জন্য একবারই লাগবে।";
+          $("sigCancel").hidden = !getTodaySignature();
+          if (!sigDlg.open) sigDlg.showModal();
+        }
+        // সিগনেচার থাকলে true; না থাকলে প্যাড খুলে false ফেরত দেয় (সই শেষে after চলে)
+        function ensureSignature(after) {
+          if (isAdmin || getTodaySignature()) return true;
+          openSignature(after);
+          return false;
+        }
+        $("sigClear").addEventListener("click", sigClear);
+        $("sigCancel").addEventListener("click", () => {
+          sigAfter = null;
+          sigDlg.close();
+        });
+        sigDlg.addEventListener("cancel", (e) => {
+          if (!getTodaySignature()) e.preventDefault(); // সই ছাড়া বন্ধ হবে না
+        });
+        $("sigOk").addEventListener("click", () => {
+          if (!sigDirty) {
+            $("sigErr").textContent = "আগে বক্সে সই করুন।";
+            return;
+          }
+          storeSignature(sigCv.toDataURL("image/png"));
+          sigDlg.close();
+          const cb = sigAfter;
+          sigAfter = null;
+          if (cb) cb();
+        });
+        $("entrySign").addEventListener("click", () => openSignature(null));
+        // ক্যামেরা/ছবি: সাদা কাগজে সইয়ের ছবি নিয়ে ব্যাকগ্রাউন্ড স্বচ্ছ করে বসায়
+        $("sigCamera").addEventListener("click", () => $("sigFile").click());
+        $("sigFile").addEventListener("change", (e) => {
+          const f = e.target.files && e.target.files[0];
+          e.target.value = "";
+          if (!f) return;
+          const img = new Image();
+          img.onload = () => {
+            sigClear();
+            const W = sigCv.width,
+              H = sigCv.height;
+            const sc = Math.min(W / img.width, H / img.height);
+            const w = img.width * sc,
+              h = img.height * sc;
+            sigCtx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+            const id = sigCtx.getImageData(0, 0, W, H);
+            const px = id.data;
+            for (let i = 0; i < px.length; i += 4) {
+              const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+              const a = px[i + 3] === 0 || lum >= 170 ? 0 : Math.min(255, (170 - lum) * 3);
+              px[i] = px[i + 1] = px[i + 2] = 17;
+              px[i + 3] = a;
+            }
+            sigCtx.putImageData(id, 0, 0);
+            sigDirty = true;
+            URL.revokeObjectURL(img.src);
+          };
+          img.onerror = () => {
+            $("sigErr").textContent = "ছবিটি পড়া যায়নি, আবার চেষ্টা করুন।";
+          };
+          img.src = URL.createObjectURL(f);
+        });
+
         function populateSavedForm(data) {
           const total = (data.rows && data.rows.length) || 0;
           const n = Math.max(1, Math.ceil(total / ROWS));
@@ -3980,6 +4268,21 @@
               if (pg.fields[k])
                 pg.fields[k].value = (data.fields && data.fields[k]) || "";
             });
+            const sigBox = pg.form.querySelector(".sign:not(.rsm) > div");
+            if (sigBox) {
+              let im = sigBox.querySelector(".sig-img");
+              if (data.signatureMpo) {
+                if (!im) {
+                  im = document.createElement("img");
+                  im.className = "sig-img";
+                  im.alt = "";
+                  sigBox.appendChild(im);
+                }
+                im.src = data.signatureMpo;
+              } else if (im) {
+                im.remove();
+              }
+            }
             const b = pg.form.querySelector(".inv-no-badge");
             if (b) {
               b.textContent = "";
@@ -4543,6 +4846,7 @@
             rows: items.map((it) => it.row),
             codes: items.map((it) => it.code),
             employeeInfo: { ...currentEmployeeInfo },
+            signatureMpo: isAdmin ? "" : getTodaySignature(),
           };
         }
 
@@ -4851,6 +5155,8 @@
         }
 
         function apply() {
+          // আজকের MPO সিগনেচার না থাকলে আগে সেটা নেবে, তারপর আবার apply চলবে
+          if (!ensureSignature(apply)) return;
           // মেয়াদ শেষ হয়নি (Exp ফাঁকা + সতর্কতা) এমন সারি থাকলে সেভ আটকাবে
           const bad = Array.from(list.children).filter(
             (d) => d.querySelector(".row-warn")?.style.display === "block",
@@ -5186,6 +5492,7 @@
               rows: pending.rows,
               codes: pending.codes,
               employeeInfo: pending.employeeInfo || {},
+              signatureMpo: pending.signatureMpo || "",
               invoiceNo: pending.invoiceNo,
               savedAt: now.toISOString(),
             };
@@ -5990,6 +6297,8 @@
         dlg.addEventListener("scroll", placePanels, true);
         window.addEventListener("resize", placePanels);
 
+        let lookupRun = null,
+          lookupTimerActive = false;
         let allCache = null,
           seq = 0,
           timer = null,
@@ -7395,11 +7704,16 @@
           updateTerritoryFields();
           pendingAdminRecord = null;
           setAdminMode(false);
-          timer = setTimeout(lookup, 600);
+          lookupTimerActive = true;
+          timer = setTimeout(() => {
+            lookupTimerActive = false;
+            lookupRun = lookup();
+          }, 600);
         });
         $("de_ipi").addEventListener("change", () => {
           clearTimeout(timer);
-          lookup();
+          lookupTimerActive = false;
+          lookupRun = lookup();
         });
 
         dlg.addEventListener("keydown", (e) => {
