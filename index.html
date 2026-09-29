@@ -2361,6 +2361,33 @@
         color: #1a3f7a;
         font-size: 18px;
       }
+      #reportDlg .rd-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 0 0 12px;
+      }
+      #reportDlg .rd-head h2 {
+        margin: 0;
+      }
+      #reportDlg .rd-head .rd-new-entry {
+        flex: 0 0 auto;
+        margin-left: auto;
+        padding: 7px 14px;
+        border: 1px solid #1b7a3d;
+        border-radius: 6px;
+        background: #1b7a3d;
+        color: #fff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      #reportDlg .rd-head .rd-new-entry[hidden] {
+        display: none;
+      }
       #reportDlg .rd-range {
         display: flex;
         flex-wrap: nowrap;
@@ -3893,7 +3920,12 @@
     </dialog>
     <dialog id="reportDlg" aria-labelledby="rdTitle">
       <div class="rd-body">
-        <h2 id="rdTitle">Report</h2>
+        <div class="rd-head">
+          <h2 id="rdTitle">Report</h2>
+          <button type="button" class="rd-new-entry" id="rdNewEntry" hidden>
+            New Entry
+          </button>
+        </div>
         <div class="rd-range">
           <label class="rd-field rd-date-field">
             <span class="f">From</span>
@@ -4607,16 +4639,29 @@
           try {
             localStorage.setItem(
               EMP_KEY,
-              JSON.stringify({
-                ipi: $("de_ipi").value.trim(),
-                mpo: $("de_mpo").value.trim(),
-                wp_mpo: $("de_wp_mpo").value.trim(),
-                am: $("de_am").value.trim(),
-                wp_am: $("de_wp_am").value.trim(),
-                territoryCode: currentTerritoryCode || "",
-                employeeInfo: { ...currentEmployeeInfo },
-                isAdmin: !!isAdmin,
-              }),
+              JSON.stringify(
+                amProxy
+                  ? {
+                      ipi: amProxy.ipi,
+                      mpo: amProxy.mpo,
+                      wp_mpo: amProxy.wp_mpo,
+                      am: amProxy.am,
+                      wp_am: amProxy.wp_am,
+                      territoryCode: amProxy.territoryCode || "",
+                      employeeInfo: { ...amProxy.info },
+                      isAdmin: false,
+                    }
+                  : {
+                      ipi: $("de_ipi").value.trim(),
+                      mpo: $("de_mpo").value.trim(),
+                      wp_mpo: $("de_wp_mpo").value.trim(),
+                      am: $("de_am").value.trim(),
+                      wp_am: $("de_wp_am").value.trim(),
+                      territoryCode: currentTerritoryCode || "",
+                      employeeInfo: { ...currentEmployeeInfo },
+                      isAdmin: !!isAdmin,
+                    },
+              ),
             );
           } catch (e) {}
         }
@@ -4672,7 +4717,7 @@
           $("chemistFieldsBlock").classList.remove("pre-ok-hidden");
           // Admin মোডে নিজের কোনো টেরিটরি/AM নেই, তাই কোন MPO-এর হয়ে এন্ট্রি
           // হচ্ছে সেটা এখানে IPI No দিয়ে বেছে নিতে হয়
-          $("adminChemistIpiRow").hidden = !isAdmin;
+          $("adminChemistIpiRow").hidden = !(isAdmin || isAreaManager());
           $("entryBlank").hidden = false;
           $("entryReport").hidden = false;
           document
@@ -4777,9 +4822,16 @@
             isAdmin = false;
           }
           saveEmployee();
-          showChemistSection();
           st.className = "ipiStatus";
           st.textContent = "";
+          // AM / ZM / RSM / DM: সরাসরি Report ডায়ালগ
+          if (!isAdmin && isSupervisor()) {
+            showChemistSection();
+            dlg.close();
+            openReportDialogSafe();
+            return;
+          }
+          showChemistSection();
           if (isAdmin) $("de_adminChemistIpi").focus();
           else $("de_ccode").focus();
         }
@@ -4822,7 +4874,7 @@
             o &&
             o.img &&
             o.date === todayStr() &&
-            o.ipi === $("de_ipi").value.trim()
+            o.ipi === selfIpi()
           )
             return o.img;
           return "";
@@ -4889,7 +4941,7 @@
         function storeSignature(img) {
           sigMem = {
             date: todayStr(),
-            ipi: $("de_ipi").value.trim(),
+            ipi: selfIpi(),
             img: img,
           };
           try {
@@ -6742,7 +6794,9 @@
           dlg.close();
           openBlankForm();
         };
-        $("entryReport").onclick = () => {
+        // AM/ZM/RSM/DM (Admin নয়) — রিপোর্টই তাদের হোম স্ক্রিন
+        const isSupervisorHome = () => !isAdmin && isSupervisor();
+        function openReportDialog() {
           const today = new Date();
           const todayStr =
             today.getFullYear() +
@@ -6767,8 +6821,83 @@
           $("rdSummaryBtn").hidden = !(isAdmin && adminViewAs === "ADMIN");
           $("rdPostedBtn").hidden = !(isAdmin && adminViewAs === "ADMIN");
           updateReportTitle();
-          reportDlg.showModal();
-        };
+          // শুধু AM-এর জন্য New Entry বাটন; হোম স্ক্রিনে থাকলে Close বাটন নেই
+          const home = isSupervisorHome();
+          $("rdNewEntry").hidden = !isAreaManager();
+          $("rdClose").hidden = home;
+          if (home && dlg.open) dlg.close();
+          if (!reportDlg.open) reportDlg.showModal();
+        }
+        // এক টিকে একটা ডায়ালগ বন্ধ করে আরেকটা খুললে কিছু মোবাইল ব্রাউজারে ফেইল
+        // করে, তাই খুলেছে কি না দেখে কয়েকবার আবার চেষ্টা করা হয়
+        function openReportDialogSafe() {
+          let tries = 0;
+          (function attempt() {
+            tries++;
+            try {
+              openReportDialog();
+            } catch (e) {}
+            requestAnimationFrame(() => {
+              if (!reportDlg.open && tries < 5) setTimeout(attempt, 100);
+            });
+          })();
+        }
+        $("entryReport").onclick = openReportDialog;
+        reportDlg.addEventListener("cancel", (e) => {
+          // হোম স্ক্রিনে Esc দিলে রিপোর্ট বন্ধ হয়ে ফাঁকা পর্দা যেন না আসে
+          if (isSupervisorHome()) e.preventDefault();
+        });
+        // ---- AM: New Entry → Chemist Information; অধীনস্থ MPO বেছে এন্ট্রি ----
+        function startAmEntry() {
+          if (!isAreaManager()) return;
+          if (!amProxy) {
+            amProxy = {
+              ipi: $("de_ipi").value.trim(),
+              mpo: $("de_mpo").value.trim(),
+              wp_mpo: $("de_wp_mpo").value.trim(),
+              am: $("de_am").value.trim(),
+              wp_am: $("de_wp_am").value.trim(),
+              territoryCode: currentTerritoryCode || "",
+              info: { ...currentEmployeeInfo },
+            };
+          }
+          // নতুন এন্ট্রি: আগের MPO/Chemist বাদ, আবার MPO বাছতে হবে
+          adminChemistResolved = null;
+          $("de_adminChemistIpi").value = "";
+          $("adminChemistIpiStatus").className = "ipiStatus";
+          $("adminChemistIpiStatus").textContent = "";
+          currentTerritoryCode = "";
+          currentEmployeeInfo = {};
+          $("de_mpo").value = "";
+          updateTerritoryFields();
+          ["de_ccode", "de_chemist", "de_addr"].forEach((id) => {
+            $(id).value = "";
+          });
+          if (reportDlg.open) reportDlg.close();
+          showPage("none");
+          document.body.classList.add("de-open");
+          $("entryFieldsBlock").classList.remove("post-search-hidden");
+          document
+            .querySelectorAll(".product-list-group")
+            .forEach((el) => el.classList.add("post-search-hidden"));
+          dlg.classList.remove("wide-mode");
+          showChemistSection();
+          let tries = 0;
+          (function attempt() {
+            tries++;
+            document.body.classList.add("de-open");
+            if (!dlg.open) {
+              try {
+                dlg.showModal();
+              } catch (e) {}
+            }
+            requestAnimationFrame(() => {
+              if (dlg.open) $("de_adminChemistIpi").focus();
+              else if (tries < 5) setTimeout(attempt, 100);
+            });
+          })();
+        }
+        $("rdNewEntry").onclick = startAmEntry;
         $("rdClose").onclick = () => reportDlg.close();
 
         function parseDateInput(value) {
@@ -6893,7 +7022,7 @@
             // (যেটা দিয়ে অ্যাপ ওপেন/লগইন করা হয়েছে) দিয়ে সেভ করা এন্ট্রিগুলোই
             // দেখবে। প্রতিটি এন্ট্রির মালিকের IPI No fields.mpo-এর ভেতরে
             // "IPI-XXXXXX - নাম" আকারে সেভ থাকে (দেখুন collectEntry/mpoText)।
-            const myIpi = isAdmin ? null : norm($("de_ipi").value.trim());
+            const myIpi = isAdmin ? null : norm(selfIpi());
             // Area Manager হলে: নিজের এরিয়ার অধীন সব টেরিটরির এন্ট্রি দেখবে
             // (এন্ট্রিতে সেভ থাকা employeeInfo.amIpi / areaName মিলিয়ে;
             // পুরনো এন্ট্রিতে employeeInfo না থাকলে AM-এর নাম দিয়ে মেলানো হয়)
@@ -6902,7 +7031,7 @@
             const amMode = isAreaManager() || vp === "AM";
             // Depot Manager: নিজের ডিপোর এন্ট্রি, কিন্তু শুধু RSM সই হওয়া গুলো
             const dmMode = isDepotManager() || vp === "DEPOT MANAGER";
-            const myDepotName = (currentEmployeeInfo.depotName || "")
+            const myDepotName = (selfInfo().depotName || "")
               .trim()
               .toUpperCase();
             function entryUnderMyDepot(entry) {
@@ -6916,13 +7045,13 @@
               );
             }
             const myAmName = (
-              $("de_am").value ||
-              currentEmployeeInfo.amName ||
+              (amProxy ? amProxy.am : $("de_am").value) ||
+              selfInfo().amName ||
               ""
             )
               .trim()
               .toUpperCase();
-            const myAreaName = (currentEmployeeInfo.areaName || "")
+            const myAreaName = (selfInfo().areaName || "")
               .trim()
               .toUpperCase();
             function entryUnderMyArea(entry) {
@@ -6944,15 +7073,15 @@
             const rsmMode = isRsm() || vp === "ZONE" || vp === "REGION";
             const rsmLevel =
               vp === "ZONE" ||
-              (!vp && /^zone/i.test(currentEmployeeInfo.team || ""))
+              (!vp && /^zone/i.test(selfInfo().team || ""))
                 ? "zone"
                 : "region";
             const up = (v) =>
               String(v || "")
                 .trim()
                 .toUpperCase();
-            const myLvCode = up(currentEmployeeInfo[rsmLevel + "Code"]);
-            const myLvName = up(currentEmployeeInfo[rsmLevel + "Name"]);
+            const myLvCode = up(selfInfo()[rsmLevel + "Code"]);
+            const myLvName = up(selfInfo()[rsmLevel + "Name"]);
             function entryUnderMyRegion(entry) {
               const info = (entry && entry.employeeInfo) || {};
               const ec = up(info[rsmLevel + "Code"]);
@@ -7922,19 +8051,26 @@
           // "DINAJPUR/Emp_Password" নোডে পাওয়া গেলে, OK চাপার আগে পাসওয়ার্ড
           // চাওয়া হয় ও যাচাই হয় ----
           isAdmin = false,
-          pendingAdminRecord = null;
+          pendingAdminRecord = null,
+          // ---- AM যখন নিজের অধীনস্থ MPO-র হয়ে এন্ট্রি দেয়: ফর্মের IPI/MPO/AM/
+          // টেরিটরি তখন সেই MPO-র তথ্যে বদলে যায়, কিন্তু AM-এর নিজের পরিচয় (রোল,
+          // সই, রিপোর্ট ফিল্টার) এখানে আলাদা রাখা হয় ----
+          amProxy = null;
+        const selfInfo = () => (amProxy ? amProxy.info : currentEmployeeInfo);
+        const selfIpi = () =>
+          amProxy ? amProxy.ipi : $("de_ipi").value.trim();
         // ---- Area Manager: রেকর্ডের TEAM = "Area" হলে সে AM (findAmInfo-র নিয়মই)।
         // Admin মোডে এটা প্রযোজ্য নয়। AM নিজের এরিয়ার (AREA NAME) অধীন সব
         // টেরিটরির রিপোর্ট দেখবে, আর তার সই ফরমের "Signature of AM"-এ বসবে ----
         function isAreaManager() {
-          return !isAdmin && /^area$/i.test(currentEmployeeInfo.team || "");
+          return !isAdmin && /^area$/i.test(selfInfo().team || "");
         }
         // ---- RSM: TEAM = Zone / Region। সে নিজের Region/Zone-এর অধীন সব
         // এরিয়া ও টেরিটরির রিপোর্ট (এরিয়া ভিত্তিক সাজানো) দেখবে; তার সই
         // ফরমের "Signature of RSM" ঘরে বসবে ----
         const RSM_TEAM = /^(zone|region)/i;
         function isRsm() {
-          return !isAdmin && RSM_TEAM.test(currentEmployeeInfo.team || "");
+          return !isAdmin && RSM_TEAM.test(selfInfo().team || "");
         }
         // ---- Depot Manager: TEAM বা DESIGNATION-এ "Depot" থাকলে সে Depot Manager।
         // সে নিজের ডিপোর (DEPOT NAME) এন্ট্রি দেখবে — কিন্তু শুধু সেগুলোই যেগুলোতে
@@ -7945,8 +8081,8 @@
             !isAdmin &&
             !isAreaManager() &&
             !isRsm() &&
-            (DM_ROLE.test(currentEmployeeInfo.team || "") ||
-              DM_ROLE.test(currentEmployeeInfo.designation || ""))
+            (DM_ROLE.test(selfInfo().team || "") ||
+              DM_ROLE.test(selfInfo().designation || ""))
           );
         }
         function isSupervisor() {
@@ -7968,9 +8104,7 @@
           if (isAdmin) return adminViewAs;
           if (isDepotManager()) return "DEPOT MANAGER";
           if (isRsm())
-            return /^zone/i.test(currentEmployeeInfo.team || "")
-              ? "ZONE"
-              : "REGION";
+            return /^zone/i.test(selfInfo().team || "") ? "ZONE" : "REGION";
           if (isAreaManager()) return "AM";
           return "MPO";
         }
@@ -8816,7 +8950,7 @@
         function validateChemistFields() {
           // Admin মোডে আগে MPO-এর IPI No দিয়ে টেরিটরি/পরিচয় বেছে না নিলে
           // এন্ট্রি এগোনো যাবে না — নাহলে রেকর্ডে কোনো MPO/টেরিটরি জমা হবে না
-          if (isAdmin && !currentTerritoryCode) {
+          if ((isAdmin || isAreaManager()) && !currentTerritoryCode) {
             showMessage(
               "আগে Entry-এর জন্য MPO-এর IPI No দিন, তারপর Product List-এ যান।",
               "warning",
@@ -9193,6 +9327,27 @@
           // IPI নম্বরটা আড়ালে থেকে যায়); ফোকাস করলে আবার raw IPI ফিরিয়ে
           // এডিট করা যায়
           adminChemistResolved = null;
+        // AM শুধু নিজের এরিয়ার অধীন MPO-র হয়ে এন্ট্রি দিতে পারবে (Zone/Region/
+        // Area/Depot ম্যানেজার বাদ)
+        function amCanEnterFor(rec) {
+          const up = (v) =>
+            String(v || "")
+              .trim()
+              .toUpperCase();
+          const team = pick(rec, "TEAM");
+          if (
+            /^(area|zone|region)/i.test(team) ||
+            DM_ROLE.test(team) ||
+            DM_ROLE.test(pick(rec, "DESIGNATION"))
+          )
+            return false;
+          const me = selfInfo();
+          const ac = up(pick(rec, "AREA CODE"));
+          const an = up(pick(rec, "AREA NAME"));
+          if (me.areaCode && ac) return up(me.areaCode) === ac;
+          if (me.areaName && an) return up(me.areaName) === an;
+          return false;
+        }
         async function adminChemistLookup() {
           const raw = $("de_adminChemistIpi").value.trim();
           const mine = ++adminChemistSeq;
@@ -9243,6 +9398,15 @@
               updateTerritoryFields();
               stEl.className = "ipiStatus err";
               stEl.textContent = ipi + " নম্বরে কোনো MPO পাওয়া যায়নি।";
+              return;
+            }
+            if (isAreaManager() && !amCanEnterFor(rec)) {
+              adminChemistResolved = null;
+              currentTerritoryCode = "";
+              currentEmployeeInfo = {};
+              updateTerritoryFields();
+              stEl.className = "ipiStatus err";
+              stEl.textContent = "এই MPO আপনার এরিয়ার অধীনে নেই।";
               return;
             }
             const name = pick(rec, "NAME");
@@ -9350,7 +9514,8 @@
         function renderAdminEmpSuggestions(records, query) {
           const panel = $("adminEmpSuggestions");
           const q = (query || "").trim().toUpperCase();
-          if (!records || !q) {
+          // AM ফোকাস করলেই তার অধীন সব MPO-র তালিকা দেখতে পাবে (টাইপ না করেও)
+          if (!records || (!q && !isAreaManager())) {
             panel.replaceChildren();
             panel.classList.remove("show");
             return;
@@ -9364,6 +9529,7 @@
                   .trim()
                   .toUpperCase() === "ACTIVE",
             )
+            .filter((o) => !isAreaManager() || amCanEnterFor(o))
             .filter((o) => {
               const ipi = pick(o, "IPI NO").toUpperCase();
               const name = pick(o, "NAME").toUpperCase();
@@ -9372,7 +9538,7 @@
                 ipi.includes(q) || name.includes(q) || terrCode.includes(q)
               );
             })
-            .slice(0, 24);
+            .slice(0, isAreaManager() ? 80 : 24);
           panel.replaceChildren(
             ...matches.map((rec) => {
               const button = document.createElement("button");
@@ -9416,8 +9582,7 @@
           const panel = $("adminEmpSuggestions");
           const query = ($("de_adminChemistIpi").value || "").trim();
           if (
-            !query ||
-            query.length < 2 ||
+            (!isAreaManager() && (!query || query.length < 2)) ||
             (adminChemistResolved && query === adminChemistResolved.label)
           ) {
             panel.replaceChildren();
@@ -9749,6 +9914,7 @@
         // কাজ করবে না, তখন আবার নতুন করে লগইন সেকশন থেকে শুরু করতে হবে। ----
         const savedEmp = loadEmployee();
         const hasEmp = !!(savedEmp && savedEmp.ipi);
+        let startSupervisor = false;
         if (hasEmp) {
           const savedAm = savedEmp.am || savedEmp.employeeInfo?.amName || "";
           const savedAmSeparator = savedAm.indexOf(" - ");
@@ -9774,6 +9940,9 @@
           updateTerritoryFields();
           autoName = savedEmp.mpo || "";
           isAdmin = !!savedEmp.isAdmin;
+          // Supervisor (AM/ZM/RSM/DM)-এর নিজের টেরিটরি না-ও থাকতে পারে; lookup()
+          // চললে currentEmployeeInfo মুছে যায়, তাই আগেই দেখে নেওয়া হয়
+          startSupervisor = !isAdmin && isSupervisor();
           showChemistSection();
           if (currentTerritoryCode) {
             ensureChemistList(currentTerritoryCode).catch((error) =>
@@ -9782,18 +9951,25 @@
           }
           if (
             !currentEmployeeInfo.ipi ||
-            (!currentTerritoryCode && !currentEmployeeInfo.officeStaff)
+            (!currentTerritoryCode &&
+              !currentEmployeeInfo.officeStaff &&
+              !startSupervisor)
           )
             lookup();
         } else {
           showEmployeeSection();
         }
 
-        dlg.showModal();
-        if (hasEmp) {
-          $("de_ccode").focus();
+        if (startSupervisor) {
+          // AM / ZM / RSM / DM: সরাসরি Report ডায়ালগ
+          openReportDialogSafe();
         } else {
-          $("de_ipi").focus();
+          dlg.showModal();
+          if (hasEmp) {
+            $("de_ccode").focus();
+          } else {
+            $("de_ipi").focus();
+          }
         }
       })();
     </script>
