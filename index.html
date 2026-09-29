@@ -2519,6 +2519,18 @@
         white-space: nowrap;
         text-align: center;
       }
+      /* Invoice No: এক লাইনে (ভাঙবে না), টেবিল স্ক্রোল হয় বলে জায়গা নেওয়া ঠিক আছে */
+      #reportDlg th:nth-child(3),
+      #reportDlg td:nth-child(3) {
+        width: 170px;
+        white-space: nowrap;
+        overflow-wrap: normal;
+      }
+      /* MPO Name: অন্তত ১৪ অক্ষর এক লাইনে ধরে */
+      #reportDlg th:nth-child(5),
+      #reportDlg td:nth-child(5) {
+        width: 120px;
+      }
       #reportDlg th:nth-child(4),
       #reportDlg td:nth-child(4) {
         width: 34%;
@@ -2935,7 +2947,7 @@
           width: 60px;
         }
         #reportDlg table {
-          min-width: 760px;
+          min-width: 920px;
         }
         #reportDlg th.rd-ver,
         #reportDlg td.rd-ver {
@@ -2961,6 +2973,15 @@
           width: 26px;
           white-space: nowrap;
           text-align: center;
+        }
+        #reportDlg th:nth-child(3),
+        #reportDlg td:nth-child(3) {
+          width: 122px;
+          white-space: nowrap;
+        }
+        #reportDlg th:nth-child(5),
+        #reportDlg td:nth-child(5) {
+          width: 90px;
         }
         #reportDlg th:nth-child(4),
         #reportDlg td:nth-child(4) {
@@ -4450,6 +4471,27 @@
           tableWrap.insertAdjacentElement("beforebegin", badge);
         })();
         mainForm.insertAdjacentElement("afterend", savedForm);
+
+        // ===== Blank Form বাটনের জন্য: Saved Form-এর হুবহু একই লেআউটের আলাদা,
+        // সম্পূর্ণ খালি কপি (৭ কলাম, ২১ সারি + নিচে Total সারি)। savedForm/
+        // summaryForm-কে এটা কোনোভাবেই স্পর্শ করে না। ----
+        const blankForm = mainForm.cloneNode(true);
+        blankForm.classList.add("saved-page", "blank-page", "saved-last");
+        blankForm.dataset.form = "Blank Form";
+        blankForm.style.display = "none";
+        blankForm.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+        blankForm.querySelectorAll("input").forEach((inp) => {
+          inp.value = "";
+        });
+        (function () {
+          const tr = document.createElement("tr");
+          tr.className = "total-row";
+          tr.innerHTML =
+            '<td colspan="6" class="total-label-cell"><input type="text" readonly tabindex="-1" value="Total" aria-label="Total"></td>' +
+            '<td class="inv-total-cell"><input type="text" readonly tabindex="-1" aria-label="Total invoice value"></td>';
+          blankForm.querySelector("tbody").appendChild(tr);
+        })();
+        savedForm.insertAdjacentElement("afterend", blankForm);
 
         // ---- Saved Form-এর পাতাগুলো: প্রতি পাতায় ২২ সারি; সারি বেশি হলে দরকার মতো
         // নতুন পাতা তৈরি হয় (কোনো সীমা নেই), সব পাতায় একই Invoice No ----
@@ -6198,6 +6240,7 @@
           // "none" = শুধু উপরের দুটি বাটন দেখাবে
           mainForm.style.display = which === "main" ? "" : "none";
           savedForm.style.display = which === "saved" ? "" : "none";
+          blankForm.style.display = which === "blank" ? "" : "none";
           savedPages.forEach((pg, i) => {
             const on = which === "saved" && i < savedPageCount;
             pg.form.style.display = on ? "" : "none";
@@ -6841,7 +6884,14 @@
           }
         });
         function openBlankForm() {
-          window.open("form-e.pdf", "_blank");
+          // Saved Form যেভাবে আলাদা পাতায় (নতুন ট্যাব/রিলোড) খোলে, Blank Form-ও
+          // ঠিক সেভাবেই খোলে — তাই A4 মাপ ও স্কেলিং একই থাকে
+          const url = new URL(location.href);
+          url.search = "";
+          const bp = new URLSearchParams();
+          bp.set("blankForm", "1");
+          url.hash = bp.toString();
+          openInApp(url.href);
         }
         $("entryBlank").onclick = () => {
           dlg.close();
@@ -9824,6 +9874,13 @@
           const backApp = $("backToApp");
           backApp.hidden = false;
           backApp.onclick = () => location.reload();
+        }
+        if (viewParams.get("blankForm") === "1") {
+          document.title = "Blank Form";
+          showPage("blank");
+          $("viewFormPrint").hidden = false;
+          $("backToReport").hidden = true;
+          return;
         }
         const viewDate = viewParams.get("viewDate");
         const viewKey = viewParams.get("viewKey");
