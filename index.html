@@ -140,6 +140,62 @@
         font-size: 12.5px;
         color: #667;
       }
+      #sigDlg #sigCamPrompt {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 120px;
+        border: 2px dashed #9aa7bd;
+        border-radius: 8px;
+        background: #f3f5f8;
+        color: #1a3f7a;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+      }
+      #sigDlg #sigCamIcon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 10px;
+      }
+      #sigDlg #sigCamIcon[hidden] {
+        display: none;
+      }
+      #sigDlg #sigClear.sig-del {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #sigDlg #sigCamPrompt {
+        position: relative;
+      }
+      #sigDlg #sigCamPrompt .sig-gal {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        font-size: 12.5px;
+        font-weight: 600;
+        border-radius: 999px;
+        background: #fff;
+      }
+      #sigDlg #sigCamPrompt:active {
+        background: #e6ebf3;
+      }
+      #sigDlg #sigPlaceholder.compact {
+        min-height: 0;
+        margin-bottom: 8px;
+        padding: 6px 4px;
+        border: none;
+        background: none;
+      }
       #sigDlg canvas {
         display: block;
         width: 100%;
@@ -215,6 +271,14 @@
         pointer-events: none;
         filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
         will-change: transform;
+      }
+      /* ছবি তুলে সই নেওয়া হলে কলমের আইকন ও "আঙুলে সই করুন" লেখা দেখানো হয় না */
+      #sigDlg #sigPad.photo-mode #sigPen,
+      #sigDlg #sigPad.photo-mode #sigStrip {
+        display: none;
+      }
+      #sigDlg #sigPad.photo-mode {
+        cursor: default;
       }
       #sigDlg #sigStrip {
         padding: 12px 8px 14px;
@@ -1066,6 +1130,27 @@
       }
       #entry header.dh h2 .panel-badge[hidden] {
         display: none;
+      }
+      .panel-select {
+        margin-left: 14px;
+        padding: 3px 8px;
+        border: 1px solid #1a3f7a;
+        border-radius: 999px;
+        background: #1a3f7a;
+        color: #fff;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        cursor: pointer;
+        vertical-align: middle;
+      }
+      .panel-select[hidden] {
+        display: none;
+      }
+      .panel-select option {
+        background: #fff;
+        color: #111;
       }
       #entry header.dh .header-actions {
         display: flex;
@@ -3038,6 +3123,22 @@
       }
 
       /* ---- কাস্টম মেসেজ বক্স (alert/confirm-এর বদলে) ---- */
+      dialog.cmsg-overlay {
+        margin: 0;
+        border: 0;
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        max-height: none;
+        color: inherit;
+      }
+      dialog.cmsg-overlay:not([open]) {
+        display: none;
+      }
+      dialog.cmsg-overlay::backdrop {
+        background: transparent;
+      }
       .cmsg-overlay {
         position: fixed;
         inset: 0;
@@ -3255,6 +3356,14 @@
               >Employee Information</span
             >
             <span id="entryPanelBadge" class="panel-badge" hidden></span>
+            <select id="entryPanelSelect" class="panel-select" title="প্যানেল বদলান" hidden>
+              <option value="ADMIN">ADMIN PANEL</option>
+              <option value="MPO">MPO PANEL</option>
+              <option value="AM">AM PANEL</option>
+              <option value="ZONE">ZONE PANEL</option>
+              <option value="REGION">REGION PANEL</option>
+              <option value="DEPOT MANAGER">DEPOT MANAGER PANEL</option>
+            </select>
           </h2>
           <div class="header-actions">
             <button
@@ -3576,6 +3685,21 @@
         <div id="sigPlaceholder">
           উপরে "✎ কলম দিয়ে সই দিন" চাপুন, অথবা নিচে ক্যামেরা/গ্যালারি থেকে সইয়ের ছবি দিন।
         </div>
+        <div id="sigCamPrompt" role="button" tabindex="0" title="ক্যামেরা চালু করুন">
+          <svg viewBox="0 0 48 48" width="46" height="46" aria-hidden="true">
+            <path d="M6 15h9l3-5h12l3 5h9a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V17a2 2 0 0 1 2-2z" fill="none" stroke="#1a3f7a" stroke-width="2.6" stroke-linejoin="round"/>
+            <circle cx="24" cy="26" r="7.5" fill="none" stroke="#1a3f7a" stroke-width="2.6"/>
+          </svg>
+          <span>স্বাক্ষরের ছবি তুলুন</span>
+          <button type="button" id="sigGallery" class="sig-gal">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="9" cy="10" r="1.8" fill="currentColor"/>
+              <path d="M4 18l5-5 4 4 3-3 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+            গ্যালারি
+          </button>
+        </div>
         <div id="sigCamWrap" hidden>
           <video id="sigVideo" playsinline muted autoplay></video>
           <div id="sigGuide"></div>
@@ -3596,13 +3720,22 @@
         </div>
         <div id="sigErr" role="alert"></div>
         <div class="sig-actions">
-          <button type="button" id="sigClear">মুছুন</button>
-          <button type="button" id="sigCamera">ক্যামেরা</button>
-          <button type="button" id="sigGallery">গ্যালারি</button>
+          <button type="button" id="sigClear" class="sig-del" title="Delete">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+              <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Delete
+          </button>
+          <button type="button" id="sigCamIcon" class="sig-camicon" title="ক্যামেরা" aria-label="ক্যামেরা" hidden>
+            <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+              <path d="M6 15h9l3-5h12l3 5h9a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V17a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+              <circle cx="24" cy="26" r="7.5" fill="none" stroke="currentColor" stroke-width="3"/>
+            </svg>
+          </button>
           <input type="file" id="sigFile" accept="image/*" hidden />
           <span class="sp"></span>
           <button type="button" id="sigCancel" hidden>বাতিল</button>
-          <button type="button" id="sigOk" class="ok">সেভ</button>
+          <button type="button" id="sigOk" class="ok">Save</button>
         </div>
       </div>
     </dialog>
@@ -3695,11 +3828,11 @@
             <select id="rdTerr"></select>
           </label>
           <label class="rd-field" id="rdSignWrap" hidden>
-            <span class="f">স্বাক্ষর</span>
+            <span class="f">Signature</span>
             <select id="rdSign">
-              <option value="all">সব</option>
-              <option value="unsigned">স্বাক্ষরহীন</option>
-              <option value="signed">স্বাক্ষরিত</option>
+              <option value="all">All</option>
+              <option value="unsigned">Unsigned</option>
+              <option value="signed">Signed</option>
             </select>
           </label>
         </div>
@@ -3859,8 +3992,9 @@
               success: "✓",
               info: "i",
             };
-            const overlay = document.createElement("div");
+            const overlay = document.createElement("dialog");
             overlay.className = "cmsg-overlay";
+            overlay.addEventListener("cancel", (e) => e.preventDefault());
             overlay.innerHTML =
               '<div class="cmsg-box cmsg-' +
               type +
@@ -3873,6 +4007,11 @@
               "</div>";
             overlay.querySelector(".cmsg-text").textContent = text;
             document.body.appendChild(overlay);
+            try {
+              overlay.showModal(); // মডাল ডায়ালগের ওপরেও যেন পপআপ সবার ওপরে থাকে
+            } catch (err) {
+              overlay.setAttribute("open", "");
+            }
             const okBtn = overlay.querySelector(".cmsg-ok");
             okBtn.focus();
             function close() {
@@ -3892,8 +4031,9 @@
         }
         function showConfirm(text) {
           return new Promise((resolve) => {
-            const overlay = document.createElement("div");
+            const overlay = document.createElement("dialog");
             overlay.className = "cmsg-overlay";
+            overlay.addEventListener("cancel", (e) => e.preventDefault());
             overlay.innerHTML =
               '<div class="cmsg-box cmsg-warning" role="alertdialog" aria-modal="true">' +
               '<div class="cmsg-icon">!</div>' +
@@ -3905,6 +4045,11 @@
               "</div>";
             overlay.querySelector(".cmsg-text").textContent = text;
             document.body.appendChild(overlay);
+            try {
+              overlay.showModal(); // মডাল ডায়ালগের ওপরেও যেন পপআপ সবার ওপরে থাকে
+            } catch (err) {
+              overlay.setAttribute("open", "");
+            }
             const okBtn = overlay.querySelector(".cmsg-ok");
             const cancelBtn = overlay.querySelector(".cmsg-cancel");
             okBtn.focus();
@@ -4383,10 +4528,16 @@
           $("entrySectionName").textContent = name;
           // Chemist Information-এর পাশে কোন প্যানেলে আছে (MPO/AM/ZONE/...) দেখানো হয়
           const badge = $("entryPanelBadge");
+          const psel = $("entryPanelSelect");
           if (badge) {
             const onChemist = name === "Chemist Information";
-            badge.hidden = !onChemist;
-            badge.textContent = onChemist ? roleLabel() + " PANEL" : "";
+            // Admin-এর জন্য ব্যাজের জায়গায় ড্রপডাউন — প্যানেল বদলানো যায়
+            badge.hidden = !onChemist || isAdmin;
+            badge.textContent = onChemist && !isAdmin ? roleLabel() + " PANEL" : "";
+            if (psel) {
+              psel.hidden = !onChemist || !isAdmin;
+              if (isAdmin) psel.value = adminViewAs;
+            }
           }
         }
         function showEmployeeSection() {
@@ -4507,6 +4658,7 @@
               return;
             }
             isAdmin = true;
+            adminViewAs = "ADMIN";
           } else {
             isAdmin = false;
           }
@@ -4636,6 +4788,7 @@
           sigCtx.strokeStyle = "#111";
         }
         function sigClear() {
+          $("sigPad").classList.remove("photo-mode");
           sigCtx.clearRect(0, 0, sigCv.width, sigCv.height);
           sigDirty = false;
           $("sigErr").style.color = "";
@@ -4677,6 +4830,7 @@
         sigStyle();
         sigPad.addEventListener("pointerdown", (e) => {
           e.preventDefault();
+          if (sigPad.classList.contains("photo-mode")) return;
           try {
             sigPad.setPointerCapture(e.pointerId);
           } catch (err) {}
@@ -4706,11 +4860,25 @@
             sigPenRest(true);
           }),
         );
+        // শুরুর অবস্থায় (কলম বন্ধ, ক্যামেরা বন্ধ, কোনো সই নেই) মাঝখানে ক্যামেরা আইকন সহ
+        // "স্বাক্ষরের ছবি তুলুন" বক্স দেখানো হয়; বক্সে চাপলে ক্যামেরা চালু হয়
+        function sigPromptRefresh() {
+          const show =
+            sigPad.style.display === "none" &&
+            $("sigCamWrap").hidden &&
+            !$("sigPenBtn").classList.contains("active");
+          $("sigCamPrompt").style.display = show ? "" : "none";
+          // কলম খোলা থাকলে Delete-এর ডানে ছোট ক্যামেরা আইকন; চাপলে ক্যামেরা বক্সে আসে
+          $("sigCamIcon").hidden = !(
+            $("sigPenBtn").classList.contains("active") && $("sigCamWrap").hidden
+          );
+        }
         function openSignature(after) {
           sigAfter = after || null;
           sigClear();
           sigPad.style.display = "none";
-          $("sigPlaceholder").style.display = "";
+          // নির্দেশনার লেখাটা শুরুতে দেখানো হয় না; কলম বাটন চাপার পরই দেখা যায়
+          $("sigPlaceholder").style.display = "none";
           $("sigPenBtn").classList.remove("active");
           $("sigTitle").textContent = isRsm()
             ? "RSM সিগনেচার"
@@ -4729,6 +4897,7 @@
             d.getFullYear() +
             " — নিচের বক্সে সই করুন। আজকের জন্য একবারই লাগবে।";
           $("sigCancel").hidden = !getTodaySignature();
+          sigPromptRefresh();
           if (!sigDlg.open) sigDlg.showModal();
           requestAnimationFrame(sigPenRest);
         }
@@ -4738,7 +4907,18 @@
           openSignature(after);
           return false;
         }
-        $("sigClear").addEventListener("click", sigClear);
+        $("sigClear").addEventListener("click", async () => {
+          // ছবি-থেকে-নেওয়া সই মুছলে শুরুর অবস্থায় ফিরে যায় (ক্যামেরা বক্স আবার আসে)
+          // সই আঁকা/নেওয়া থাকলে মুছে ফেলার আগে নিশ্চিত করা হয়
+          if (sigDirty && !(await showConfirm("আপনি কি এই সইটি মুছে ফেলতে চান?"))) return;
+          const wasPhoto = sigPad.classList.contains("photo-mode");
+          sigClear();
+          if (wasPhoto) {
+            sigPad.style.display = "none";
+            $("sigPenBtn").classList.remove("active");
+            sigPromptRefresh();
+          }
+        });
         $("sigCancel").addEventListener("click", () => {
           sigAfter = null;
           sigDlg.close();
@@ -4748,7 +4928,7 @@
         });
         $("sigOk").addEventListener("click", () => {
           if (!sigDirty) {
-            $("sigErr").textContent = "আগে ওপরের \"কলম দিয়ে সই দিন\" বা ক্যামেরা/গ্যালারি বেছে সই করুন।";
+            showMessage("আগে ওপরের \"কলম দিয়ে সই দিন\" বা ক্যামেরা/গ্যালারি বেছে সই করুন।", "warning");
             return;
           }
           storeSignature(sigCv.toDataURL("image/png"));
@@ -4840,8 +5020,7 @@
                 }
               }
             if (maxX < 0) {
-              $("sigErr").textContent =
-                "সই খুঁজে পাওয়া যায়নি। সাদা কাগজে গাঢ় কলমে সই করে, সামনে থেকে আলো ফেলে আবার তুলুন।";
+              showMessage("সই খুঁজে পাওয়া যায়নি। সাদা কাগজে গাঢ় কলমে সই করে, সামনে থেকে আলো ফেলে আবার তুলুন।", "error");
               return;
             }
             const rc = document.createElement("canvas");
@@ -4864,8 +5043,10 @@
             sigCtx.imageSmoothingQuality = "high";
             sigCtx.drawImage(rc, minX, minY, cw, ch, (W - w) / 2, (H - h) / 2, w, h);
             sigDirty = true;
+            sigPad.classList.add("photo-mode");
+            $("sigPlaceholder").style.display = "none";
             $("sigErr").style.color = "#0a7a2f";
-            $("sigErr").textContent = "✓ ছবি তোলা হয়েছে — ঠিক থাকলে \"সেভ\" চাপুন, না হলে আবার ক্যামেরা চাপুন।";
+            showMessage("✓ ছবি তোলা হয়েছে — ঠিক থাকলে \"Save\" চাপুন, না হলে Delete চেপে আবার তুলুন।", "success");
         }
 
         // লাইভ ক্যামেরা + গাইড বক্স: বক্সের ভেতরের অংশটুকুই কেটে নিয়ে পরিষ্কার করা হয়
@@ -4879,6 +5060,7 @@
           camVideo.srcObject = null;
           camWrap.hidden = true;
           sigPad.style.display = "";
+          sigPromptRefresh();
         }
         async function startCamera() {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -4891,8 +5073,7 @@
               audio: false,
             });
           } catch (err) {
-            $("sigErr").textContent =
-              "ক্যামেরা চালু করা যায়নি (অনুমতি দিন বা HTTPS লিংক ব্যবহার করুন)। ছবি বেছে নিন।";
+            showMessage("ক্যামেরা চালু করা যায়নি (অনুমতি দিন বা HTTPS লিংক ব্যবহার করুন)। ছবি বেছে নিন।", "error");
             return;
           }
           $("sigErr").textContent = "";
@@ -4901,6 +5082,7 @@
           camVideo.srcObject = camStream;
           sigPad.style.display = "none";
           camWrap.hidden = false;
+          sigPromptRefresh();
           try {
             await camVideo.play();
           } catch (e) {}
@@ -4910,7 +5092,7 @@
             vh = camVideo.videoHeight;
           if (!vw || !vh) {
             $("sigErr").style.color = "";
-            $("sigErr").textContent = "ক্যামেরা এখনো প্রস্তুত হয়নি, এক সেকেন্ড পরে আবার চাপুন।";
+            showMessage("ক্যামেরা এখনো প্রস্তুত হয়নি, এক সেকেন্ড পরে আবার চাপুন।", "warning");
             return;
           }
           camWrap.style.transition = "none";
@@ -4938,7 +5120,7 @@
             sigProcess(camVideo, sx, sy, sw, sh);
           } catch (err) {
             $("sigErr").style.color = "";
-            $("sigErr").textContent = "ছবি প্রসেস করা যায়নি, আবার চেষ্টা করুন।";
+            showMessage("ছবি প্রসেস করা যায়নি, আবার চেষ্টা করুন।", "error");
           } finally {
             stopCamera();
           }
@@ -4950,18 +5132,32 @@
           const isOpen = $("sigPenBtn").classList.contains("active");
           if (isOpen) {
             sigPad.style.display = "none";
-            $("sigPlaceholder").style.display = "";
+            $("sigPlaceholder").classList.remove("compact");
+            $("sigPlaceholder").style.display = "none"; // কলম বন্ধ করলে লেখা দেখাবে না
             $("sigPenBtn").classList.remove("active");
+            sigPromptRefresh();
             return;
           }
           stopCamera();
-          $("sigPlaceholder").style.display = "none";
+          sigPad.classList.remove("photo-mode"); // কলম বাটন চাপলে আবার কলমে সই করা যাবে
+          // কলম খুললেও নির্দেশনার লেখাটা দেখা যায় (বক্সের ওপরে ছোট করে)
+          $("sigPlaceholder").classList.add("compact");
+          $("sigPlaceholder").style.display = "";
           sigPad.style.display = "";
           $("sigPenBtn").classList.add("active");
+          sigPromptRefresh();
           requestAnimationFrame(() => sigPenRest(true));
         });
-        $("sigCamera").addEventListener("click", startCamera);
-        $("sigGallery").addEventListener("click", () => {
+        $("sigCamPrompt").addEventListener("click", startCamera);
+        $("sigCamIcon").addEventListener("click", startCamera);
+        $("sigCamPrompt").addEventListener("keydown", (e) => {
+          if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            startCamera();
+          }
+        });
+        $("sigGallery").addEventListener("click", (e) => {
+          e.stopPropagation(); // ক্যামেরা বক্সের ক্লিক (ক্যামেরা চালু) যেন না চলে
           $("sigPlaceholder").style.display = "none";
           $("sigPenBtn").classList.remove("active");
           $("sigFile").click();
@@ -4979,9 +5175,10 @@
             URL.revokeObjectURL(img.src);
           };
           img.onerror = () => {
-            $("sigErr").textContent = "ছবিটি পড়া যায়নি, আবার চেষ্টা করুন।";
+            showMessage("ছবিটি পড়া যায়নি, আবার চেষ্টা করুন।", "error");
             $("sigPlaceholder").style.display = "none";
             sigPad.style.display = "";
+            sigPromptRefresh();
           };
           img.src = URL.createObjectURL(f);
         });
@@ -5869,7 +6066,7 @@
         async function restoreDraftClick() {
           const draft = loadDraft();
           if (!hasMeaningfulDraft(draft)) {
-            setDraftStatus("সংরক্ষিত কোনো Draft পাওয়া যায়নি।");
+            showMessage("No saved draft found.", "info");
             return;
           }
           if (
@@ -5889,7 +6086,7 @@
           } else {
             showChemistSection();
           }
-          setDraftStatus("আগের Draft ফিরিয়ে আনা হয়েছে।");
+          showMessage("Previous draft restored.", "success");
         }
         let draftAutoSaveTimer = null;
         function scheduleDraftAutoSave() {
@@ -6383,8 +6580,8 @@
           reportMode = "raw";
           // Generate/All Print সবার জন্য উন্মুক্ত, কিন্তু Summary (ও তার
           // ভেতরের Post) শুধু Admin-এর জন্যই দেখা যাবে।
-          $("rdSummaryBtn").hidden = !isAdmin;
-          $("rdPostedBtn").hidden = !isAdmin;
+          $("rdSummaryBtn").hidden = !(isAdmin && adminViewAs === "ADMIN");
+          $("rdPostedBtn").hidden = !(isAdmin && adminViewAs === "ADMIN");
           updateReportTitle();
           reportDlg.showModal();
         };
@@ -6452,25 +6649,25 @@
           const toValue = $("rdTo").value;
           const status = $("rdStatus");
           status.className = "rd-status";
+          status.textContent = ""; // আগের লেখা মুছে নতুন করে শুরু
           if (!fromValue || !toValue) {
-            status.className = "rd-status err";
-            status.textContent = "From ও To তারিখ দিন।";
+            showMessage("Please enter From and To dates.", "warning");
             return;
           }
           const from = parseDateInput(fromValue);
           const to = parseDateInput(toValue);
           if (from > to) {
-            status.className = "rd-status err";
-            status.textContent = "From তারিখ To তারিখের আগে বা সমান হতে হবে।";
+            showMessage("From date must be on or before the To date.", "warning");
             return;
           }
           const dayCount = Math.round((to - from) / 86400000) + 1;
           if (dayCount > MAX_REPORT_DAYS) {
-            status.className = "rd-status err";
-            status.textContent =
-              "একসাথে সর্বোচ্চ " +
-              MAX_REPORT_DAYS +
-              " দিনের রিপোর্ট দেখা যাবে। রেঞ্জ ছোট করুন।";
+            showMessage(
+              "Maximum " +
+                MAX_REPORT_DAYS +
+                " days can be shown at once. Please shorten the range.",
+              "warning",
+            );
             return;
           }
           const dates = Array.from(
@@ -6485,7 +6682,7 @@
           const generateButton = $("rdGenerate");
           generateButton.disabled = true;
           status.innerHTML =
-            '<span class="inline-spinner" aria-hidden="true"></span>লোড হচ্ছে…';
+            '<span class="inline-spinner" aria-hidden="true"></span>Loading…';
           $("rdSummary").hidden = true;
           $("rdActions").hidden = true;
           $("rdRows").replaceChildren();
@@ -6515,9 +6712,11 @@
             // Area Manager হলে: নিজের এরিয়ার অধীন সব টেরিটরির এন্ট্রি দেখবে
             // (এন্ট্রিতে সেভ থাকা employeeInfo.amIpi / areaName মিলিয়ে;
             // পুরনো এন্ট্রিতে employeeInfo না থাকলে AM-এর নাম দিয়ে মেলানো হয়)
-            const amMode = isAreaManager();
+            // Admin কোনো প্যানেলে গেলে রিপোর্টে সেই প্যানেলের নিয়ম চলে (ডাটা সব দেখে)
+            const vp = isAdmin ? adminViewAs : "";
+            const amMode = isAreaManager() || vp === "AM";
             // Depot Manager: নিজের ডিপোর এন্ট্রি, কিন্তু শুধু RSM সই হওয়া গুলো
-            const dmMode = isDepotManager();
+            const dmMode = isDepotManager() || vp === "DEPOT MANAGER";
             const myDepotName = (currentEmployeeInfo.depotName || "")
               .trim()
               .toUpperCase();
@@ -6544,10 +6743,11 @@
               return !!myAmName && String(f.am || "").trim().toUpperCase() === myAmName;
             }
             // RSM (Zone/Region) হলে: নিজের Region/Zone-এর অধীন সব এরিয়া-টেরিটরি
-            const rsmMode = isRsm();
-            const rsmLevel = /^zone/i.test(currentEmployeeInfo.team || "")
-              ? "zone"
-              : "region";
+            const rsmMode = isRsm() || vp === "ZONE" || vp === "REGION";
+            const rsmLevel =
+              vp === "ZONE" || (!vp && /^zone/i.test(currentEmployeeInfo.team || ""))
+                ? "zone"
+                : "region";
             const up = (v) => String(v || "").trim().toUpperCase();
             const myLvCode = up(currentEmployeeInfo[rsmLevel + "Code"]);
             const myLvName = up(currentEmployeeInfo[rsmLevel + "Name"]);
@@ -6577,6 +6777,7 @@
                     if (!data.posted) return;
                   } else if (data.posted && (reportMode === "summary" || isAdmin))
                     return;
+                  if (vp === "DEPOT MANAGER" && !data.signatureRsm) return;
                   if (
                     myIpi &&
                     entryOwnerIpi(data) !== myIpi &&
@@ -6594,13 +6795,13 @@
             const filterMode = supMode || isAdmin;
             const reportBaseHadData = entries.length > 0;
             const infoOf = (e) => e.entry.employeeInfo || {};
-            const areaKey = (e) => infoOf(e).areaName || "Area অজানা";
+            const areaKey = (e) => infoOf(e).areaName || "Unknown Area";
             const terrKey = (e) =>
               String(infoOf(e).territoryCode || infoOf(e).territoryName || "-");
             const terrLabel = (e) =>
               [infoOf(e).territoryCode, infoOf(e).territoryName]
                 .filter((v) => v && String(v).trim())
-                .join(" - ") || "Territory অজানা";
+                .join(" - ") || "Unknown Territory";
             const isSignedByMe = (e) =>
               dmMode
                 ? !!e.entry.signatureDm
@@ -6623,18 +6824,18 @@
                 $("rdTerr").value = "";
                 const signSel = $("rdSign");
                 signSel.replaceChildren();
-                (isAdmin
+                (isAdmin && vp === "ADMIN"
                   ? [
-                      ["all", "সব"],
-                      ["am", "AM-এর কাছে (সই বাকি)"],
-                      ["rsm", "RSM-এর কাছে (সই বাকি)"],
-                      ["dm", "Depot Manager-এর কাছে (সই বাকি)"],
-                      ["done", "সম্পূর্ণ"],
+                      ["all", "All"],
+                      ["am", "Pending with AM"],
+                      ["rsm", "Pending with RSM"],
+                      ["dm", "Pending with Depot Manager"],
+                      ["done", "Completed"],
                     ]
                   : [
-                      ["all", "সব"],
-                      ["unsigned", "স্বাক্ষরহীন"],
-                      ["signed", "স্বাক্ষরিত"],
+                      ["all", "All"],
+                      ["unsigned", "Unsigned"],
+                      ["signed", "Signed"],
                     ]
                 ).forEach(([v, t]) => {
                   const o = document.createElement("option");
@@ -6644,15 +6845,17 @@
                 });
                 signSel.value = "all";
               }
-              $("rdAreaWrap").hidden = !(rsmMode || dmMode || isAdmin);
+              const adminAreaOn = isAdmin && vp === "ADMIN";
+              const adminSignOn = isAdmin && vp === "ADMIN";
+              $("rdAreaWrap").hidden = !(rsmMode || dmMode || adminAreaOn);
               $("rdFilters").hidden = false;
               $("rdTerrWrap").hidden = false;
               $("rdSignWrap").hidden =
-                !(amMode || dmMode || isAdmin) || reportMode === "summary";
+                !(amMode || dmMode || adminSignOn) || reportMode === "summary";
               // RSM: "Generate" মোডে শুধু যেগুলোতে তার সই এখনো পড়েনি
               const signOk = (e) => {
-                if (isAdmin) {
-                  const v = $("rdSign").value;
+                if (isAdmin && !supMode) {
+                  const v = $("rdSignWrap").hidden ? "all" : $("rdSign").value;
                   return reportMode === "summary" || v === "all" || v === stageOf(e);
                 }
                 if (rsmMode) return reportMode === "summary" || !isSignedByMe(e);
@@ -6669,13 +6872,15 @@
                 const areas = Array.from(new Set(afterSign.map(areaKey))).sort();
                 setSelectOptions(
                   $("rdArea"),
-                  "সব Area (" + areas.length + ")",
+                  "All Area (" + areas.length + ")",
                   areas.map((a) => [a, a]),
                   $("rdArea").value,
                 );
               }
               const areaSel =
-                rsmMode || dmMode || isAdmin ? $("rdArea").value : "";
+                (rsmMode || dmMode || isAdmin) && !$("rdAreaWrap").hidden
+                  ? $("rdArea").value
+                  : "";
               const forTerr = areaSel
                 ? afterSign.filter((e) => areaKey(e) === areaSel)
                 : afterSign;
@@ -6686,7 +6891,7 @@
               );
               setSelectOptions(
                 $("rdTerr"),
-                "সব Territory (" + terrItems.length + ")",
+                "All Territory (" + terrItems.length + ")",
                 terrItems,
                 $("rdTerr").value,
               );
@@ -6708,7 +6913,7 @@
             $("rdGrandTail").colSpan = 5;
             const areaOf = (e) =>
               (e.entry.employeeInfo && e.entry.employeeInfo.areaName) ||
-              "Area অজানা";
+              "Unknown Area";
             entries.sort(
               (left, right) =>
                 (rsmMode || dmMode
@@ -6823,7 +7028,7 @@
                   a +
                   " — " +
                   g.rows.length +
-                  " টি এন্ট্রি, মোট " +
+                  " entries, total " +
                   Math.round(g.val);
                 tr.appendChild(td);
                 finalRows.push(tr, ...g.rows);
@@ -6846,19 +7051,25 @@
                   ? "View / Print"
                   : "All Print";
             if (failed) {
-              status.className = "rd-status err";
-              status.textContent =
+              showMessage(
                 failed.error.code === "perm"
-                  ? "Firebase Rules-এ পড়ার অনুমতি নেই।"
-                  : "ইন্টারনেট/সার্ভার সমস্যায় সব তথ্য আনা যায়নি।";
-            } else {
-              status.textContent = entries.length
-                ? ""
-                : filterMode && reportBaseHadData
-                  ? "এই ফিল্টারে দেখানোর মতো কোনো এন্ট্রি নেই।"
+                  ? "No permission to read (Firebase Rules)."
+                  : "Could not load all data (internet/server problem).",
+                "error",
+              );
+            } else if (!entries.length) {
+              const emptyText =
+                filterMode && reportBaseHadData
+                  ? "No entries match this filter."
                   : reportMode === "posted"
-                    ? "এই তারিখ রেঞ্জে কোনো Posted এন্ট্রি নেই।"
-                    : "এই তারিখ রেঞ্জে কোনো সেভ করা এন্ট্রি পাওয়া যায়নি।";
+                    ? "No posted entries found in this date range."
+                    : "No saved entries found in this date range.";
+              // ফিল্টার বদলানোর সময় বারবার পপআপ না এসে ছোট লেখা; নতুন রিপোর্টে পপআপ
+              if (useCache) {
+                status.textContent = emptyText;
+              } else {
+                showMessage(emptyText, "info");
+              }
             }
           } finally {
             generateButton.disabled = false;
@@ -6874,6 +7085,7 @@
         // চেকবক্সসহ রিপোর্ট টেবিল দেখায়। এরপর প্রতিটি রো-তে চেক দিয়ে বা
         // "সব নির্বাচন" চেক দিয়ে "All Print"-এ ক্লিক করলে, শুধু নির্বাচিত
         // এন্ট্রিগুলো Summary ফরম্যাটে ভিউ হবে — তখন প্রিন্ট করা যাবে। =====
+        $("entryPanelSelect").onchange = (e) => applyAdminPanel(e.target.value);
         $("rdSummaryBtn").onclick = () => {
           reportMode = "summary";
           updateReportTitle();
@@ -6996,9 +7208,7 @@
             checkedIdx.includes(i),
           );
           if (!selectedEntries.length) {
-            $("rdStatus").className = "rd-status err";
-            $("rdStatus").textContent =
-              "প্রিন্ট করার জন্য অন্তত একটি এন্ট্রি নির্বাচন করুন।";
+            showMessage("Select at least one entry to print.", "warning");
             return;
           }
           const storageKey =
@@ -7499,8 +7709,12 @@
           return isAreaManager() || isRsm() || isDepotManager();
         }
         // Report ডায়ালগের শিরোনামে দেখানো হয় এখন কোন প্যানেলে আছে
+        // Admin ড্রপডাউন থেকে যেকোনো প্যানেলে যেতে পারে (সব ডাটা দেখে, শুধু সেই
+        // প্যানেলের ফিল্টার/লেআউটে)। সই দেওয়া শুধু আসল ব্যক্তির প্যানেলেই হয়।
+        const ADMIN_PANELS = ["ADMIN", "MPO", "AM", "ZONE", "REGION", "DEPOT MANAGER"];
+        let adminViewAs = "ADMIN";
         function roleLabel() {
-          if (isAdmin) return "ADMIN";
+          if (isAdmin) return adminViewAs;
           if (isDepotManager()) return "DEPOT MANAGER";
           if (isRsm())
             return /^zone/i.test(currentEmployeeInfo.team || "")
@@ -7509,14 +7723,44 @@
           if (isAreaManager()) return "AM";
           return "MPO";
         }
+        function applyAdminPanel(v) {
+          if (!isAdmin || !ADMIN_PANELS.includes(v)) return;
+          adminViewAs = v;
+          if (v !== "ADMIN" && (reportMode === "summary" || reportMode === "posted"))
+            reportMode = "raw";
+          const adminPanel = v === "ADMIN";
+          $("rdSummaryBtn").hidden = !adminPanel;
+          $("rdPostedBtn").hidden = !adminPanel;
+          updateReportTitle();
+          const es = $("entryPanelSelect");
+          if (es) es.value = v;
+          // প্যানেল বদলালে ফিল্টার-অপশন নতুন করে সাজাতে ক্যাশ ছাড়াই আবার তৈরি হয়
+          if (reportDlg.open && !$("rdSummary").hidden) generateReport();
+        }
         function updateReportTitle() {
           const t = $("rdTitle");
           if (!t) return;
           t.textContent = "Report ";
           const b = document.createElement("span");
           b.className = "rd-role-badge";
-          b.textContent = roleLabel();
-          t.appendChild(b);
+          if (isAdmin) {
+            const sel = document.createElement("select");
+            sel.className = "panel-select";
+            sel.id = "rdPanelSelect";
+            sel.title = "প্যানেল বদলান";
+            ADMIN_PANELS.forEach((v) => {
+              const o = document.createElement("option");
+              o.value = v;
+              o.textContent = v + " PANEL";
+              sel.appendChild(o);
+            });
+            sel.value = adminViewAs;
+            sel.onchange = () => applyAdminPanel(sel.value);
+            t.appendChild(sel);
+          } else {
+            b.textContent = roleLabel();
+            t.appendChild(b);
+          }
           if (typeof reportMode !== "undefined" && reportMode === "posted") {
             const pb = document.createElement("span");
             pb.className = "rd-role-badge";
