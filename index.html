@@ -6512,6 +6512,15 @@
             );
           });
         }
+        async function firestoreFetch(url, options = {}) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 15000);
+          try {
+            return await fetch(url, { ...options, signal: controller.signal });
+          } finally {
+            clearTimeout(timer);
+          }
+        }
         // path যেমন: "Dinajpur/Sep-2026/25/IPI-MEXP-202609-0001" (নির্দিষ্ট ডকুমেন্ট)
         async function firestoreSetDoc(path, data) {
           const payload =
@@ -6539,7 +6548,7 @@
         }
         // collectionPath যেমন: "Dinajpur/Sep-2026/25" (ওই তারিখের সব ইনভয়েস)
         async function firestoreListDocs(collectionPath) {
-          const r = await fetch(FIRESTORE_BASE + "/" + collectionPath);
+          const r = await firestoreFetch(FIRESTORE_BASE + "/" + collectionPath);
           if (r.status === 404) return [];
           if (!r.ok) await firestoreThrowFor(r);
           const j = await r.json();
