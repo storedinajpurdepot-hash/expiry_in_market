@@ -2813,6 +2813,16 @@
           page-break-after: auto;
         }
       }
+      /* Saved Form প্রিন্ট: চারদিকে আধা ইঞ্চি (12.7mm) মার্জিন।
+         ফর্মের লেআউট অবিকৃত রেখে A4-এর ভেতরে ০.৯৮ স্কেলে বসানো হয়েছে
+         (উপরে ১২.৭mm, নিচে ~১৩.৮mm, বামে-ডানে ~১৫.৮mm করে) */
+      @media print {
+        .saved-page:not(.summary-page) {
+          transform-origin: top left !important;
+          transform: translate(2.08mm, 2.9mm) scale(0.98) !important;
+          margin-bottom: 0 !important;
+        }
+      }
       @media (max-width: 720px) {
         dialog#viewDlg {
           width: 100vw;
@@ -3199,21 +3209,4 @@
         background: #fff;
         border-radius: 10px;
         border-top: 5px solid #1a3f7a;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-        padding: 18px 18px 14px;
-        text-align: center;
-        font-family: inherit;
-      }
-      .cmsg-box.cmsg-error {
-        border-top-color: #b3261e;
-      }
-      .cmsg-box.cmsg-warning {
-        border-top-color: #b8860b;
-      }
-      .cmsg-box.cmsg-success {
-        border-top-color: #1e8e3e;
-      }
-      .cmsg-icon {
-        width: 40px;
-        height: 40px;
-       
+    
