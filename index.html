@@ -1834,6 +1834,16 @@
         #entry .addbar #addRow {
           display: none;
         }
+        #entry .addbar > #viewAdded {
+          display: block;
+          min-width: 0;
+          height: 30px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
         #entry .pl:not(.hd) > #viewAdded {
           grid-column: 3;
           grid-row: 2;
@@ -9863,7 +9873,12 @@
             ":not(.view-all) > .pl:last-child > .row-add",
           );
           const rowAdd = editingAdd || lastRowAdd;
-          if (!rowAdd) return;
+          if (!rowAdd) {
+            if (viewButton.parentElement !== addbar) {
+              addbar.appendChild(viewButton);
+            }
+            return;
+          }
           if (addMeta && addMeta.parentElement !== rowAdd.parentElement) {
             rowAdd.insertAdjacentElement("beforebegin", addMeta);
           }
