@@ -6521,6 +6521,22 @@
             clearTimeout(timer);
           }
         }
+        async function firestoreJson(response) {
+          let timer;
+          try {
+            return await Promise.race([
+              response.json(),
+              new Promise((resolve, reject) => {
+                timer = setTimeout(
+                  () => reject(new Error("Firestore response timeout")),
+                  15000,
+                );
+              }),
+            ]);
+          } finally {
+            clearTimeout(timer);
+          }
+        }
         // path যেমন: "Dinajpur/Sep-2026/25/IPI-MEXP-202609-0001" (নির্দিষ্ট ডকুমেন্ট)
         async function firestoreSetDoc(path, data) {
           const payload =
@@ -6551,7 +6567,7 @@
           const r = await firestoreFetch(FIRESTORE_BASE + "/" + collectionPath);
           if (r.status === 404) return [];
           if (!r.ok) await firestoreThrowFor(r);
-          const j = await r.json();
+          const j = await firestoreJson(r);
           return (j.documents || []).map((doc) => {
             const data = fromFirestoreFields(doc.fields || {});
             if (data && Array.isArray(data.rows)) {
@@ -7288,6 +7304,10 @@
             }
           } finally {
             generateButton.disabled = false;
+            // লোডিং স্পিনার সবসময় বন্ধ হবে (সফল/ব্যর্থ/ডাটা-নেই যেটাই হোক)
+            if (status.querySelector(".inline-spinner")) {
+              status.textContent = "";
+            }
           }
         }
         $("rdGenerate").onclick = () => {
