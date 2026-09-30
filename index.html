@@ -696,6 +696,9 @@
       }
       .product-suggestion .meta {
         display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         font-size: 11px;
         color: #555;
       }
@@ -1444,6 +1447,21 @@
         color: #555;
         font-size: 12px;
       }
+      #entry .cur-prod-value {
+        margin: 8px 0 0;
+        padding: 8px 10px;
+        border: 1px solid #ccd3dc;
+        border-radius: 5px;
+        background: #f3f5f8;
+        color: #333;
+        font-size: 13.5px;
+      }
+      #entry .cur-prod-value strong {
+        color: #1a3f7a;
+      }
+      #entry .cur-prod-value span {
+        font-weight: 700;
+      }
       #entry .product-type-bar {
         display: flex;
         align-items: center;
@@ -1796,6 +1814,12 @@
         #entry #deRows:not(.view-all) .pl.row-committed {
           display: none;
         }
+        /* এডিট মোডে (view-all) মোবাইলে শুধু যে সারিটি এডিট হচ্ছে সেটাই
+           দেখানো হয়; বাকি Add করা সারি ও খালি সারি লুকানো থাকে, না হলে
+           নাম ছাড়া কার্ডগুলো এলোমেলো দেখায় */
+        #entry #deRows.view-all > .pl:not(.editing) {
+          display: none;
+        }
         #entry .pl:not(.hd) > .n {
           display: none;
         }
@@ -1887,14 +1911,17 @@
           font-weight: 400;
           color: #555;
         }
-        /* Chemist Code / Name / Address: মোবাইলে Total, Quantity, Invoice
-           Value-এর নিচে, প্রতিটি আলাদা লাইনে দেখানোর জন্য রি-অর্ডার */
+        /* Chemist Code / Name / Address: মোবাইলে Type Product-এর উপরে,
+           প্রতিটি আলাদা লাইনে দেখানোর জন্য রি-অর্ডার */
         #entry .db {
           display: flex;
           flex-direction: column;
         }
         #entry .fields#entryFieldsBlock {
           order: 1;
+        }
+        #entry .cur-prod-value {
+          order: 2;
         }
         #entry .product-type-bar {
           order: 2;
@@ -1906,10 +1933,11 @@
           order: 4;
         }
         #entry #deTotals {
-          order: 5;
+          order: 1;
         }
         #entry #chemistSummary {
-          order: 6;
+          order: 1;
+          margin: 4px 0 0;
         }
         #entry .row-nav-bar {
           display: flex;
@@ -3896,6 +3924,13 @@
               ▼
             </button>
           </div>
+          <div
+            id="curProdValue"
+            class="cur-prod-value post-search-hidden product-list-group"
+            aria-live="polite"
+          >
+            <strong>Value:</strong> <span id="curProdValueNum">0</span>
+          </div>
           <div class="product-type-bar post-search-hidden product-list-group">
             <label for="typeProduct">Type Product</label>
             <input
@@ -3922,7 +3957,7 @@
             class="pl-totals post-search-hidden product-list-group"
             aria-live="polite"
           >
-            <span class="tot-label">Total</span
+            <span class="tot-label">Grand Total</span
             ><span class="tot-qty" id="totQty">0</span
             ><span class="tot-inv" id="totInv">0.00</span>
           </div>
@@ -6263,7 +6298,26 @@
           });
           $("totQty").textContent = hasQty ? String(qtySum) : "0";
           $("totInv").textContent = hasInv ? String(Math.round(invSum)) : "0";
+          updateCurrentValue();
         }
+        // Type Product-এর উপরে: এই মুহূর্তে যে product টাইপ/এডিট হচ্ছে শুধু তার Value
+        function updateCurrentValue() {
+          const el = $("curProdValueNum");
+          if (!el) return;
+          try {
+            const row =
+              editingRow ||
+              Array.from(list.children).find(
+                (r) => !r.classList.contains("row-committed"),
+              );
+            const raw = (row?.querySelectorAll("input")[5]?.value || "").trim();
+            const v = Number(raw);
+            el.textContent =
+              raw && Number.isFinite(v) ? String(Math.round(v)) : "0";
+          } catch (e) {}
+        }
+        document.addEventListener("click", () => setTimeout(updateCurrentValue, 0));
+        document.addEventListener("input", () => setTimeout(updateCurrentValue, 0));
 
         function renumber() {
           $("rowNote").style.color = "";
@@ -8693,8 +8747,8 @@
           }
           return "";
         };
-        const CHEMIST_CACHE_PREFIX = "chemistCache_";
-        const CHEMIST_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+        const CHEMIST_CACHE_PREFIX = "chemistCache_fs1_";
+        const CHEMIST_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
         const chemistListMemory = new Map();
         let chemistFetchInFlight = null;
         function normalizeTerritoryId(value) {
@@ -8898,11 +8952,55 @@
                 normalizeTerritoryId(chemist.territoryId) === target,
             );
         }
+        // Firestore "Chemist List" থেকে ওই Territory-র সব Chemist একবারে আনে।
+        // NDIN => divisions.INM, SVD => divisions.ISV, বাকি => divisions.PHARMA।
+        // Territory ID "NDIN…" বা "DIN…" যেভাবেই সেভ থাকুক, দুটোই মেলানো হয়।
         async function fetchChemistsForTerritory(territoryCode) {
-          const rows = await fetchChemistSheetRows();
-          const matches = chemistRecordsFromSheetRows(rows, territoryCode);
+          const raw = String(territoryCode || "").trim().toUpperCase();
+          const base = normalizeTerritoryId(raw);
+          if (!base) return [];
+          const prefix = invoicePrefix(raw);
+          const division =
+            prefix === "INM" ? "INM" : prefix === "ISV" ? "ISV" : "PHARMA";
+          const variants = Array.from(
+            new Set([raw, base, /^DIN/.test(base) ? "N" + base : base]),
+          );
+          const r = await firestoreFetch(FIRESTORE_BASE + ":runQuery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              structuredQuery: {
+                from: [{ collectionId: "Chemist List" }],
+                where: {
+                  fieldFilter: {
+                    field: {
+                      fieldPath: "divisions." + division + ".territoryId",
+                    },
+                    op: "IN",
+                    value: {
+                      arrayValue: {
+                        values: variants.map((v) => ({ stringValue: v })),
+                      },
+                    },
+                  },
+                },
+              },
+            }),
+          });
+          if (!r.ok) await firestoreThrowFor(r);
+          const rows = await firestoreJson(r);
           const unique = new Map();
-          matches.forEach((chemist) => unique.set(chemist.code, chemist));
+          (rows || []).forEach((x) => {
+            if (!x || !x.document) return;
+            const c = fromFirestoreFields(x.document.fields || {});
+            const code = String(c.codeStr || "").trim();
+            if (!code) return;
+            unique.set(code, {
+              code,
+              name: String(c.chemistName || "").trim(),
+              address: String(c.address || "").trim(),
+            });
+          });
           return Array.from(unique.values());
         }
         async function ensureChemistList(territoryCode) {
@@ -8914,7 +9012,8 @@
             return chemistFetchInFlight.promise;
           const promise = fetchChemistsForTerritory(territoryCode)
             .then((chemists) => {
-              saveChemistCache(key, chemists);
+              // খালি তালিকা ক্যাশ করা হয় না
+              if (chemists && chemists.length) saveChemistCache(key, chemists);
               return chemists;
             })
             .catch((error) => {
@@ -8935,7 +9034,7 @@
           if (code === "empty") {
             return "Sheet-এর প্রথম ট্যাব (tab) থেকে কোনো ডাটা পাওয়া যায়নি। ডাটা প্রথম ট্যাবে আছে কিনা, বা হেডারের নিচে সারি আছে কিনা দেখুন।";
           }
-          return "Google Sheet থেকে Chemist list আনা যায়নি — ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।";
+          return "Chemist-এর তথ্য আনা যায়নি — ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।";
         }
         function renderChemistSuggestions(chemists, query) {
           const panel = $("chemistSuggestions");
@@ -9162,20 +9261,18 @@
                 const button = document.createElement("button");
                 button.type = "button";
                 button.className = "product-suggestion";
-                const code = document.createElement("span");
-                code.className = "code";
-                code.textContent = record.fields.CODE || "";
                 const name = document.createElement("span");
                 name.className = "name";
                 name.textContent = record.name;
                 const meta = document.createElement("span");
                 meta.className = "meta";
                 meta.textContent =
-                  "Pack Size: " +
+                  (record.fields.CODE || "-") +
+                  " | Pack Size: " +
                   (record.fields["PACK SIZE"] || "-") +
                   " | PER PCS: " +
                   (getRecordPrice(record) || "-");
-                button.append(code, name, meta);
+                button.append(name, meta);
                 button.addEventListener("mousedown", (event) =>
                   event.preventDefault(),
                 );
@@ -9341,19 +9438,38 @@
             ) || null
           );
         }
+        // Firestore-এর "Chemist List" কালেকশন থেকে codeStr মিলিয়ে Chemist-এর
+        // নাম (chemistName) ও ঠিকানা (address) আনে (limit 1)।
         async function findChemistByCode(chemistCode) {
           const target = (chemistCode || "").trim();
           if (!target) return null;
-          let chemists = loadChemistCache(currentTerritoryCode);
-          if (!chemists)
-            chemists = await ensureChemistList(currentTerritoryCode);
-          const chemist = findCachedChemist(chemists, target);
-          if (!chemist) return null;
+          const r = await firestoreFetch(FIRESTORE_BASE + ":runQuery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              structuredQuery: {
+                from: [{ collectionId: "Chemist List" }],
+                where: {
+                  fieldFilter: {
+                    field: { fieldPath: "codeStr" },
+                    op: "EQUAL",
+                    value: { stringValue: target },
+                  },
+                },
+                limit: 1,
+              },
+            }),
+          });
+          if (!r.ok) await firestoreThrowFor(r);
+          const rows = await firestoreJson(r);
+          const hit = (rows || []).find((x) => x && x.document);
+          if (!hit) return null;
+          const c = fromFirestoreFields(hit.document.fields || {});
           return {
             fields: {
-              "CLIENT ID": chemist.code || target,
-              NAME: chemist.name || "",
-              ADDRESS: chemist.address || "",
+              "CLIENT ID": String(c.codeStr || target),
+              NAME: String(c.chemistName || "").trim(),
+              ADDRESS: String(c.address || "").trim(),
             },
           };
         }
@@ -10704,5 +10820,127 @@
         });
       })();
     </script>
-  </body>
+      <script>
+      // Chemist Code ও Type Product: ঘরের ডান অর্ধেকে ট্যাপ করলে নিউমেরিক
+      // কিবোর্ড, বাম অর্ধেকে ট্যাপ করলে টেক্সট কিবোর্ড
+      (function () {
+        ["de_ccode", "typeProduct"].forEach(function (id) {
+          const inp = document.getElementById(id);
+          if (!inp) return;
+          inp.setAttribute("inputmode", "text");
+          function apply(e) {
+            if (e.target !== inp) return;
+            const r = inp.getBoundingClientRect();
+            const mode = e.clientX > r.left + r.width / 2 ? "numeric" : "text";
+            if (inp.getAttribute("inputmode") === mode) return;
+            inp.setAttribute("inputmode", mode);
+            // ফোকাসে থাকা অবস্থায় কিবোর্ড বদলাতে হলে blur করে আবার ফোকাস দিতে হয়
+            if (document.activeElement === inp) {
+              const a = inp.selectionStart,
+                b = inp.selectionEnd;
+              inp.blur();
+              setTimeout(function () {
+                inp.focus();
+                try {
+                  inp.setSelectionRange(a, b);
+                } catch (err) {}
+              }, 30);
+            }
+          }
+          inp.addEventListener("pointerdown", apply);
+          inp.addEventListener("touchstart", function (e) {
+            const t = e.touches && e.touches[0];
+            if (t) apply({ target: inp, clientX: t.clientX });
+          }, { passive: true });
+        });
+      })();
+    </script>
+    <script>
+      // মোবাইল কিবোর্ডের Next/Enter চাপলে সাজেশনের প্রথমটি (বা তীর চিহ্নে বাছাইকৃতটি)
+      // অটো বসানো। অনেক মোবাইল কিবোর্ড Enter কী-ইভেন্ট পাঠায় না, শুধু পরের ঘরে ফোকাস
+      // সরিয়ে দেয়; তাই "ট্যাপ ছাড়া ফোকাস বদল" ধরে সাজেশন বসানো হয়।
+      (function () {
+        let lastPointer = 0;
+        ["pointerdown", "touchstart", "mousedown"].forEach(function (t) {
+          document.addEventListener(
+            t,
+            function () {
+              lastPointer = Date.now();
+            },
+            true,
+          );
+        });
+        function panelFor(inp) {
+          if (inp.id === "typeProduct") {
+            const p = document.getElementById("typeProductSuggestions");
+            return p && p.style.display === "block" ? p : null;
+          }
+          if (inp.id === "de_ccode") {
+            const p = document.getElementById("chemistSuggestions");
+            return p && p.classList.contains("show") ? p : null;
+          }
+          if (inp.classList.contains("product-name")) {
+            const p = inp.closest(".pl")?.querySelector(".product-suggestions");
+            return p && p.style.display === "block" ? p : null;
+          }
+          if (inp.classList.contains("mfg-date") || inp.classList.contains("exp-date")) {
+            const p = inp
+              .closest(".date-suggest-field")
+              ?.querySelector(".date-suggestions");
+            return p && p.style.display === "block" ? p : null;
+          }
+          return null;
+        }
+        function pickFirst(inp, viaKey) {
+          const panel = panelFor(inp);
+          if (!panel) return false;
+          const v = (inp.value || "").trim();
+          if (!v || inp.readOnly) return false;
+          const items = Array.from(panel.children).filter(function (el) {
+            return el.tagName === "BUTTON";
+          });
+          if (!items.length) return false;
+          // ঘরে ইতিমধ্যে সাজেশনের হুবহু মান থাকলে আর বদলানো হয় না
+          const txt = function (el) {
+            return (el.textContent || "").trim().toUpperCase();
+          };
+          if (
+            inp.classList.contains("mfg-date") ||
+            inp.classList.contains("exp-date")
+          ) {
+            if (items.some(function (el) { return txt(el) === v.toUpperCase(); }))
+              return false;
+          }
+          const idx = panel._activeIndex > -1 ? panel._activeIndex : 0;
+          if (!items[idx]) return false;
+          items[idx].click();
+          return true;
+        }
+        // Next চাপলে ফোকাস সরে যায় (ট্যাপ/ক্লিক ছাড়া) → সাজেশন বসাও
+        document.addEventListener(
+          "focusout",
+          function (e) {
+            const inp = e.target;
+            if (!inp || inp.tagName !== "INPUT") return;
+            if (document.visibilityState !== "visible" || !document.hasFocus())
+              return;
+            if (Date.now() - lastPointer < 700) return;
+            pickFirst(inp, false);
+          },
+          true,
+        );
+        // কিছু কিবোর্ডে ফোকাস সরে না, শুধু keyup-এ Enter আসে (keydown এ 229)
+        document.addEventListener(
+          "keyup",
+          function (e) {
+            if (e.key !== "Enter" && e.keyCode !== 13) return;
+            const inp = e.target;
+            if (!inp || inp.tagName !== "INPUT") return;
+            pickFirst(inp, true);
+          },
+          true,
+        );
+      })();
+    </script>
+</body>
 </html>
