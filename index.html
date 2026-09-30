@@ -7774,18 +7774,34 @@
           );
           if (!ok) return;
           if (btn) btn.classList.add("spinning");
+          // সব ক্যাশ মুছে ফেলা: লগইন, Chemist Sheet ক্যাশ, Territory ক্যাশ।
+          // (সেভ করা এন্ট্রি, Draft ও সই মোছা হয় না)
+          const KEEP = [STORAGE_KEY, DRAFT_KEY, SIG_KEY];
           try {
-            localStorage.removeItem(EMP_KEY);
-            localStorage.removeItem(CHEMIST_SHEET_CACHE_KEY);
             Object.keys(localStorage)
-              .filter((k) => k.indexOf(CHEMIST_CACHE_PREFIX) === 0)
+              .filter((k) => KEEP.indexOf(k) === -1)
               .forEach((k) => localStorage.removeItem(k));
           } catch (e) {}
           try {
             sessionStorage.clear();
           } catch (e) {}
+          try {
+            if (window.caches && caches.keys)
+              await caches
+                .keys()
+                .then((ks) => Promise.all(ks.map((k) => caches.delete(k))));
+          } catch (e) {}
           window.name = "";
-          location.reload();
+          // URL বদলে রিলোড, যাতে ব্রাউজারের HTTP ক্যাশও এড়ানো যায়
+          // (file:// ও content:// এ ?query দিলে ফাইল পাওয়া যায় না, তাই সেখানে সাধারণ reload)
+          if (/^https?:$/.test(location.protocol)) {
+            const u = new URL(location.href);
+            u.hash = "";
+            u.searchParams.set("_r", Date.now());
+            location.replace(u.href);
+          } else {
+            location.reload();
+          }
         }
         $("entryPanelRefresh").onclick = () =>
           refreshAndReenter($("entryPanelRefresh"));
@@ -8632,7 +8648,7 @@
         }
 
         async function getJSON(url) {
-          const r = await fetch(url);
+          const r = await fetch(url, { cache: "no-store" });
           if (r.status === 401 || r.status === 403) {
             const e = new Error("perm");
             e.code = "perm";
@@ -8742,7 +8758,9 @@
             script.src =
               CHEMIST_SHEET_GVIZ_BASE +
               "?tqx=out:json;responseHandler:" +
-              callbackName;
+              callbackName +
+              "&_=" +
+              Date.now();
             script.async = true;
             script.onerror = () => {
               if (settled) return;
