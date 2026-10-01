@@ -2901,6 +2901,10 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      #de_ccode.chemist-locked {
+        background: #eef1f4;
+        cursor: wait;
+      }
       #adminEmpSuggestions {
         display: none;
         position: fixed;
@@ -5153,6 +5157,7 @@
           } else {
             isAdmin = false;
           }
+          syncChemistCodeLock();
           saveEmployee();
           st.className = "ipiStatus";
           st.textContent = "";
@@ -8511,6 +8516,8 @@
           timer = null,
           autoName = "",
           currentTerritoryCode = "",
+          // যে Territory-র Chemist তালিকা লোড শেষ (বা ব্যর্থ) হয়েছে তার key
+          chemistReadyKey = "",
           currentEmployeeInfo = {},
           // ---- Admin স্বীকৃতি: IPI নাম্বার PRODUCT_DB-এর
           // "DINAJPUR/Emp_Password" নোডে পাওয়া গেলে, OK চাপার আগে পাসওয়ার্ড
@@ -8623,6 +8630,7 @@
           }
         }
         function updateTerritoryFields() {
+          syncChemistCodeLock();
           $("de_group").textContent = currentEmployeeInfo.team || "-";
           $("de_am").value = currentEmployeeInfo.amName || "";
           $("de_amIpi").textContent = currentEmployeeInfo.amIpi || "";
@@ -8974,17 +8982,48 @@
                 normalizeTerritoryId(chemist.territoryId) === target,
             );
         }
+        // Admin/AM: MPO বেছে নেওয়া ও তার Territory-র Chemist তালিকা লোড শেষ না
+        // হওয়া পর্যন্ত Chemist Code ঘর read-only থাকে, লোড হলে খুলে যায়।
+        // (লোড ব্যর্থ হলেও খুলে দেওয়া হয়, যাতে কাজ আটকে না থাকে — এরর আলাদা
+        // করে দেখানো হয়।) সাধারণ MPO-র ক্ষেত্রে কিছু বদলায় না।
+        function syncChemistCodeLock() {
+          const el = $("de_ccode");
+          if (!el) return;
+          if (el.dataset.ph === undefined) el.dataset.ph = el.placeholder || "";
+          const key = normalizeTerritoryId(currentTerritoryCode);
+          const locked =
+            (isAdmin || isAreaManager()) && (!key || chemistReadyKey !== key);
+          el.readOnly = locked;
+          el.classList.toggle("chemist-locked", locked);
+          el.placeholder = locked
+            ? key
+              ? "Chemist লোড হচ্ছে…"
+              : "আগে MPO বেছে নিন"
+            : el.dataset.ph;
+          if (locked) {
+            const panel = $("chemistSuggestions");
+            if (panel) {
+              panel.replaceChildren();
+              panel.classList.remove("show");
+            }
+          }
+        }
+        // Territory ID "NDIN…" বা "DIN…" যেভাবেই সেভ থাকুক, দুটোই ধরার জন্য
+        function territoryVariants(territoryCode) {
+          const raw = String(territoryCode || "").trim().toUpperCase();
+          const base = normalizeTerritoryId(raw);
+          if (!raw || !base) return [];
+          return Array.from(
+            new Set([raw, base, /^DIN/.test(base) ? "N" + base : base]),
+          );
+        }
         // Firestore "Chemist List" থেকে ওই Territory-র সব Chemist একবারে আনে।
         // প্রতিটা ডকুমেন্টে territoryIds নামে array আছে (ISV/INM/PHARMA-র সব
         // Territory ID), তাই array-contains-any দিয়ে মেলানো হয়।
         // Territory ID "NDIN…" বা "DIN…" যেভাবেই সেভ থাকুক, দুটোই মেলানো হয়।
         async function fetchChemistsForTerritory(territoryCode) {
-          const raw = String(territoryCode || "").trim().toUpperCase();
-          const base = normalizeTerritoryId(raw);
-          if (!base) return [];
-          const variants = Array.from(
-            new Set([raw, base, /^DIN/.test(base) ? "N" + base : base]),
-          );
+          const variants = territoryVariants(territoryCode);
+          if (!variants.length) return [];
           const r = await firestoreFetch(CHEMIST_FIRESTORE_BASE + ":runQuery", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -9024,18 +9063,28 @@
         async function ensureChemistList(territoryCode) {
           const key = normalizeTerritoryId(territoryCode);
           if (!key) return [];
+          const markReady = () => {
+            chemistReadyKey = key;
+            syncChemistCodeLock();
+          };
           const cached = loadChemistCache(key);
-          if (cached) return cached;
+          if (cached) {
+            markReady();
+            return cached;
+          }
           if (chemistFetchInFlight?.key === key)
             return chemistFetchInFlight.promise;
           const promise = fetchChemistsForTerritory(territoryCode)
             .then((chemists) => {
               // খালি তালিকা ক্যাশ করা হয় না, যাতে ভুলবশত ৩০ দিন খালি না থাকে
               if (chemists && chemists.length) saveChemistCache(key, chemists);
+              chemistFetchInFlight = null;
+              markReady();
               return chemists;
             })
             .catch((error) => {
               chemistFetchInFlight = null;
+              markReady();
               throw error;
             });
           chemistFetchInFlight = { key, promise };
@@ -9484,6 +9533,16 @@
           const hit = (rows || []).find((x) => x && x.document);
           if (!hit) return null;
           const c = fromFirestoreFields(hit.document.fields || {});
+          // Territory মেলানো: Chemist-এর territoryIds-এর মধ্যে এই MPO-র
+          // Territory না থাকলে অন্য Territory-র Chemist, তাই আটকানো হয়।
+          const myTerr = territoryVariants(currentTerritoryCode);
+          if (myTerr.length) {
+            const ids = (Array.isArray(c.territoryIds) ? c.territoryIds : [])
+              .map((x) => String(x || "").trim().toUpperCase());
+            if (!ids.some((id) => myTerr.includes(id))) {
+              return { mismatch: true };
+            }
+          }
           return {
             fields: {
               "CLIENT ID": String(c.codeStr || target),
@@ -9565,6 +9624,16 @@
             $("de_ccode").focus();
             return;
           }
+          // Admin/AM: আগে MPO-র IPI না দিলে Territory জানা যায় না, তাই
+          // Territory মেলানো সম্ভব নয় — আগে MPO বেছে নিতে বলা হয়।
+          if ((isAdmin || isAreaManager()) && !currentTerritoryCode) {
+            showMessage(
+              "আগে Entry-এর জন্য MPO-এর IPI No দিন, তারপর Chemist Code Search করুন।",
+              "warning",
+            );
+            $("de_adminChemistIpi").focus();
+            return;
+          }
           const searchButton = $("searchChemist");
           searchButton.disabled = true;
           searchButton.classList.add("is-loading");
@@ -9586,6 +9655,14 @@
                 "error",
               );
               setSt("err", code + " Code-এর কোনো Chemist পাওয়া যায়নি।");
+              return;
+            }
+            if (result.mismatch) {
+              const msg =
+                code + " Code-এর Chemist এই Territory (" +
+                (currentTerritoryCode || "-") + ")-র নয়।";
+              showMessage(msg, "error");
+              setSt("err", msg);
               return;
             }
             const chemistCode =
@@ -10534,6 +10611,7 @@
           updateTerritoryFields();
           autoName = savedEmp.mpo || "";
           isAdmin = !!savedEmp.isAdmin;
+          syncChemistCodeLock();
           // Supervisor (AM/ZM/RSM/DM)-এর নিজের টেরিটরি না-ও থাকতে পারে; lookup()
           // চললে currentEmployeeInfo মুছে যায়, তাই আগেই দেখে নেওয়া হয়
           startSupervisor = !isAdmin && isSupervisor();
