@@ -6818,6 +6818,13 @@
           "https://firestore.googleapis.com/v1/projects/" +
           FIRESTORE_PROJECT +
           "/databases/(default)/documents";
+        // "Chemist List" কালেকশন যে Firebase প্রজেক্টে আছে তার Project ID।
+        // (এক্সপায়ারি/ইনভয়েসের প্রজেক্ট থেকে আলাদা হলে শুধু এই লাইনটা বদলান)
+        const CHEMIST_FIRESTORE_PROJECT = "chemist-list-dinajpur";
+        const CHEMIST_FIRESTORE_BASE =
+          "https://firestore.googleapis.com/v1/projects/" +
+          CHEMIST_FIRESTORE_PROJECT +
+          "/databases/(default)/documents";
 
         function toFirestoreValue(v) {
           if (v === null || v === undefined) return { nullValue: null };
@@ -8953,19 +8960,17 @@
             );
         }
         // Firestore "Chemist List" থেকে ওই Territory-র সব Chemist একবারে আনে।
-        // NDIN => divisions.INM, SVD => divisions.ISV, বাকি => divisions.PHARMA।
+        // প্রতিটা ডকুমেন্টে territoryIds নামে array আছে (ISV/INM/PHARMA-র সব
+        // Territory ID), তাই array-contains-any দিয়ে মেলানো হয়।
         // Territory ID "NDIN…" বা "DIN…" যেভাবেই সেভ থাকুক, দুটোই মেলানো হয়।
         async function fetchChemistsForTerritory(territoryCode) {
           const raw = String(territoryCode || "").trim().toUpperCase();
           const base = normalizeTerritoryId(raw);
           if (!base) return [];
-          const prefix = invoicePrefix(raw);
-          const division =
-            prefix === "INM" ? "INM" : prefix === "ISV" ? "ISV" : "PHARMA";
           const variants = Array.from(
             new Set([raw, base, /^DIN/.test(base) ? "N" + base : base]),
           );
-          const r = await firestoreFetch(FIRESTORE_BASE + ":runQuery", {
+          const r = await firestoreFetch(CHEMIST_FIRESTORE_BASE + ":runQuery", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -8973,10 +8978,8 @@
                 from: [{ collectionId: "Chemist List" }],
                 where: {
                   fieldFilter: {
-                    field: {
-                      fieldPath: "divisions." + division + ".territoryId",
-                    },
-                    op: "IN",
+                    field: { fieldPath: "territoryIds" },
+                    op: "ARRAY_CONTAINS_ANY",
                     value: {
                       arrayValue: {
                         values: variants.map((v) => ({ stringValue: v })),
@@ -9012,7 +9015,7 @@
             return chemistFetchInFlight.promise;
           const promise = fetchChemistsForTerritory(territoryCode)
             .then((chemists) => {
-              // খালি তালিকা ক্যাশ করা হয় না
+              // খালি তালিকা ক্যাশ করা হয় না, যাতে ভুলবশত ৩০ দিন খালি না থাকে
               if (chemists && chemists.length) saveChemistCache(key, chemists);
               return chemists;
             })
@@ -9025,16 +9028,17 @@
         }
         function chemistLoadErrorText(error) {
           const code = error && error.code;
-          if (code === "not-public") {
-            return 'Google Sheet-টা এখনো সবার জন্য খোলা (public) নেই। Sheet-এ গিয়ে Share বাটনে ক্লিক করে "Anyone with the link" + "Viewer" সিলেক্ট করুন, তারপর আবার Search করুন।';
+          // Firestore-এর আসল কারণ দেখানো হয়, শুধু "ইন্টারনেট" বলে ভুল দেখানোর বদলে
+          if (error && error.code === "perm") {
+            return "Firestore-এ Chemist List পড়ার অনুমতি নেই (HTTP " + error.status + "). Firebase Console → Firestore → Rules-এ \"Chemist List\" কালেকশনের জন্য read allow করুন। " + (error.detail || "");
           }
-          if (code === "bad-headers") {
-            return "Sheet-এর প্রথম সারির হেডার নামগুলো মিলছে না। ঠিক এই নামে কলাম আছে কিনা দেখুন: Client ID, Name, Address, Category Name, ISV Territory ID, INM Territory ID, PHARMA Territory ID";
+          if (error && error.code === "http") {
+            return "Firestore এরর (HTTP " + error.status + "): " + (error.detail || "অজানা কারণ") + " — প্রজেক্ট \"" + CHEMIST_FIRESTORE_PROJECT + "\"-এ \"Chemist List\" কালেকশন আছে কিনা দেখুন।";
           }
-          if (code === "empty") {
-            return "Sheet-এর প্রথম ট্যাব (tab) থেকে কোনো ডাটা পাওয়া যায়নি। ডাটা প্রথম ট্যাবে আছে কিনা, বা হেডারের নিচে সারি আছে কিনা দেখুন।";
+          if (error && error.name === "AbortError") {
+            return "Firestore থেকে সাড়া পেতে বেশি সময় লাগছে — ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।";
           }
-          return "Chemist-এর তথ্য আনা যায়নি — ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।";
+          return "Chemist-এর তথ্য আনা যায়নি — ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।" + (error && error.message ? " (" + error.message + ")" : "");
         }
         function renderChemistSuggestions(chemists, query) {
           const panel = $("chemistSuggestions");
@@ -9439,11 +9443,11 @@
           );
         }
         // Firestore-এর "Chemist List" কালেকশন থেকে codeStr মিলিয়ে Chemist-এর
-        // নাম (chemistName) ও ঠিকানা (address) আনে (limit 1)।
+        // নাম (chemistName) ও ঠিকানা (address) আনে (REST runQuery, limit 1)।
         async function findChemistByCode(chemistCode) {
           const target = (chemistCode || "").trim();
           if (!target) return null;
-          const r = await firestoreFetch(FIRESTORE_BASE + ":runQuery", {
+          const r = await firestoreFetch(CHEMIST_FIRESTORE_BASE + ":runQuery", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
