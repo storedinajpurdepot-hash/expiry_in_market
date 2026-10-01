@@ -2957,7 +2957,22 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      .admin-emp-suggestion .aes-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        min-width: 0;
+      }
+      .admin-emp-suggestion .aes-team {
+        flex: none;
+        color: #1a3f7a;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
       .admin-emp-suggestion .aes-terr {
+        min-width: 0;
         color: #555;
         font-size: 11px;
         overflow: hidden;
@@ -10091,10 +10106,20 @@
               const nameEl = document.createElement("span");
               nameEl.className = "aes-name";
               nameEl.textContent = pick(rec, "NAME") || "-";
+              // নামের নিচে: Territory Code + Name একসাথে, তার পাশে Team
+              const terrCode = pick(rec, "TERRITORY CODE");
+              const terrName = pick(rec, "TERRITORY NAME");
               const terrEl = document.createElement("span");
               terrEl.className = "aes-terr";
-              terrEl.textContent = pick(rec, "TERRITORY NAME") || "-";
-              button.append(ipiEl, nameEl, terrEl);
+              terrEl.textContent =
+                [terrCode, terrName].filter(Boolean).join(" - ") || "-";
+              const teamEl = document.createElement("span");
+              teamEl.className = "aes-team";
+              teamEl.textContent = "Team: " + (pick(rec, "TEAM") || "-");
+              const rowEl = document.createElement("span");
+              rowEl.className = "aes-row";
+              rowEl.append(terrEl, teamEl);
+              button.append(ipiEl, nameEl, rowEl);
               button.addEventListener("click", () => {
                 const ipiVal = pick(rec, "IPI NO");
                 panel.replaceChildren();
