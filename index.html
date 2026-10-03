@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17386f" />
     <title>Expiry Entry Form</title>
     <link
       rel="icon"
@@ -2022,6 +2023,350 @@
           display: none;
         }
       }
+      /* মোবাইলে Chemist Information হেডারের "Blank Form" বাটন স্ক্রিনের ডানে
+         বেরিয়ে যেত, ফলে ডায়ালগ পাশে একটু স্ক্রল হতো — তাই হেডার কম্প্যাক্ট */
+      @media (max-width: 720px) {
+        dialog#entry {
+          overflow-x: hidden;
+        }
+        #entry header.dh {
+          gap: 6px;
+        }
+        #entry header.dh h2 {
+          min-width: 0;
+        }
+        #entry header.dh h2 .panel-badge {
+          margin-left: 8px;
+        }
+        #entry header.dh .header-actions {
+          gap: 6px;
+          flex: none;
+        }
+        #entry .entry-blank-btn {
+          padding: 7px 9px;
+        }
+      }
+      /* =====================================================================
+         মোবাইল UI (শুধু স্ক্রিন, ≤720px) — "ক্যাপসুল" থিম
+         ফার্মা ডিপোর ফিল্ড-স্টাফের জন্য: ক্যাপসুল-আকৃতির ধাপ-ট্র্যাক, পিল বাটন,
+         টিল + নেভি রঙ। প্রিন্ট/A4 ফর্ম ও ডেস্কটপ একদম অপরিবর্তিত।
+         ===================================================================== */
+      @media screen and (max-width: 720px) {
+        dialog#entry {
+          --m-ink: #0f2a43;
+          --m-navy: #17386f;
+          --m-teal: #0d8f8b;
+          --m-teal-deep: #0a6f6c;
+          --m-mint: #e1f3f0;
+          --m-line: #c6dcd9;
+          --m-bg: #eef5f4;
+          --m-s1: var(--m-teal);
+          --m-s2: var(--m-teal);
+          --m-s3: var(--m-navy);
+          background: var(--m-bg);
+          color: var(--m-ink);
+        }
+        /* ধাপ-ট্র্যাক: Employee → Chemist → Products (এটা সত্যিই ধারাবাহিক ধাপ) */
+        dialog#entry:has(#chemistFieldsBlock:not(.pre-ok-hidden)) {
+          --m-s1: var(--m-teal);
+          --m-s2: var(--m-navy);
+          --m-s3: var(--m-line);
+        }
+        dialog#entry:has(#employeeFieldsBlock:not(.pre-ok-hidden)) {
+          --m-s1: var(--m-navy);
+          --m-s2: var(--m-line);
+          --m-s3: var(--m-line);
+        }
+        #entry header.dh {
+          position: relative;
+          background: #fff;
+          border-bottom: 0;
+          padding: 12px 14px 18px;
+          box-shadow: 0 10px 22px -16px rgba(15, 42, 67, 0.5);
+        }
+        #entry header.dh::after {
+          content: "";
+          position: absolute;
+          left: 14px;
+          right: 14px;
+          bottom: 7px;
+          height: 5px;
+          border-radius: 999px;
+          background:
+            linear-gradient(var(--m-s1), var(--m-s1)) 0 0 / calc(33.333% - 4px)
+              100% no-repeat,
+            linear-gradient(var(--m-s2), var(--m-s2)) 50% 0 /
+              calc(33.333% - 4px) 100% no-repeat,
+            linear-gradient(var(--m-s3), var(--m-s3)) 100% 0 /
+              calc(33.333% - 4px) 100% no-repeat;
+        }
+        #entry header.dh h2 {
+          color: var(--m-ink);
+        }
+        #entry header.dh h2 .section-name {
+          color: var(--m-ink);
+          font-weight: 800;
+        }
+        #entry header.dh h2 .panel-badge {
+          background: var(--m-teal);
+          padding: 2px 12px;
+        }
+        #entry .entry-blank-btn {
+          border: 1.5px solid var(--m-teal);
+          border-radius: 999px;
+          color: var(--m-teal-deep);
+          background: var(--m-mint);
+        }
+        #entry .db {
+          padding: 14px 14px 18px;
+        }
+        #entry label.f {
+          color: var(--m-ink);
+          margin: 0 0 5px 3px;
+        }
+        #entry input[type="text"] {
+          border: 1.5px solid var(--m-line);
+          border-radius: 14px;
+          color: var(--m-ink);
+          background: #fff;
+          transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+        }
+        #entry input[type="text"]:focus {
+          outline: 0;
+          border-color: var(--m-teal);
+          box-shadow: 0 0 0 4px rgba(13, 143, 139, 0.2);
+        }
+        #entry button {
+          border-radius: 999px;
+        }
+        #entry button.ok,
+        #entry footer.df button {
+          background: linear-gradient(135deg, var(--m-navy), var(--m-teal-deep));
+          border-color: transparent;
+          color: #fff;
+          font-weight: 700;
+          box-shadow: 0 8px 16px -9px rgba(23, 56, 111, 0.8);
+        }
+        #entry button.ok:active,
+        #entry footer.df button:active {
+          transform: scale(0.97);
+          box-shadow: none;
+        }
+        #entry button.ok:focus-visible,
+        #entry footer.df button:focus-visible,
+        #entry input[type="text"]:focus-visible {
+          outline-color: var(--m-teal);
+        }
+        #entry .chemist-summary {
+          background: #fff;
+          border: 1.5px solid var(--m-line);
+          border-left: 5px solid var(--m-teal);
+          border-radius: 14px;
+          color: var(--m-ink);
+          font-size: 13px;
+        }
+        #entry .chemist-summary strong {
+          color: var(--m-teal-deep);
+        }
+        #entry .cur-prod-value {
+          background: var(--m-mint);
+          border: 1.5px solid var(--m-line);
+          border-radius: 14px;
+          color: var(--m-ink);
+        }
+        #entry .cur-prod-value strong {
+          color: var(--m-teal-deep);
+        }
+        #entry .product-type-bar label {
+          color: var(--m-teal-deep);
+        }
+        #entry .pl.hd {
+          color: #4a6377;
+        }
+        #entry .pl:not(.hd) {
+          background: #fff;
+          border: 1.5px solid var(--m-line);
+          border-left: 5px solid var(--m-teal);
+          border-radius: 16px;
+          box-shadow: 0 10px 18px -14px rgba(15, 42, 67, 0.55);
+        }
+        #entry .pl-totals {
+          background: linear-gradient(135deg, var(--m-navy), var(--m-teal-deep));
+          border: 0;
+          border-radius: 16px;
+          color: #fff;
+          padding: 12px 14px;
+          box-shadow: 0 12px 22px -14px rgba(23, 56, 111, 0.9);
+        }
+        #entry .pl-totals .tot-label {
+          color: #bff0ea;
+        }
+        #entry .pl-totals .tot-qty::before,
+        #entry .pl-totals .tot-inv::before {
+          color: rgba(255, 255, 255, 0.75);
+        }
+        #entry .row-nav-btn {
+          background: linear-gradient(135deg, var(--m-teal), var(--m-teal-deep));
+          border: 0;
+          color: #fff;
+          box-shadow: 0 8px 18px -6px rgba(10, 111, 108, 0.75);
+        }
+        #entry .row-nav-btn:active {
+          background: var(--m-navy);
+        }
+        #entry footer.df {
+          background: #fff;
+          border-top: 0;
+          border-radius: 22px 22px 0 0;
+          box-shadow: 0 -12px 26px -16px rgba(15, 42, 67, 0.55);
+          padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+        }
+        /* সার্চ বাটন: টিল পিল + সাদা আইকন (লোডিং স্পিনার আগের মতোই থাকে) */
+        #entry .search-icon {
+          border: 0;
+          border-radius: 14px;
+          background: linear-gradient(135deg, var(--m-teal), var(--m-teal-deep));
+          box-shadow: 0 8px 16px -9px rgba(10, 111, 108, 0.9);
+        }
+        #entry .search-icon:hover {
+          background: linear-gradient(135deg, var(--m-teal), var(--m-teal-deep));
+        }
+        #entry .search-icon:not(.is-loading)::before {
+          border-color: #fff;
+        }
+        #entry .search-icon:not(.is-loading)::after {
+          background: #fff;
+        }
+        #entry .search-icon.is-loading::before {
+          border-color: #fff #fff transparent transparent;
+        }
+        #entry header.dh h2 .panel-refresh {
+          color: var(--m-teal-deep);
+          border-color: var(--m-teal);
+        }
+        /* Employee ধাপ: লোগো-অংশ ও টাইটেল একই সাদা কার্ডে মিলিয়ে দেওয়া */
+        #entry #entryBrand {
+          background: #fff;
+          border-bottom: 0;
+          padding-bottom: 2px;
+        }
+        #entry #entryBrand + header.dh {
+          box-shadow: 0 10px 22px -16px rgba(15, 42, 67, 0.5);
+        }
+        #entry .employee-lookup-value {
+          border: 1.5px solid var(--m-line);
+          border-radius: 14px;
+          background: var(--m-mint);
+          color: var(--m-ink);
+          padding: 10px 12px;
+        }
+        /* Grand Total কার্ড: সামারি কার্ড থেকে ফাঁক + মান এক লাইনে */
+        #entry .pl-totals {
+          grid-template-columns: auto 1fr auto;
+          margin-top: 12px;
+        }
+        #entry .pl-totals .tot-qty,
+        #entry .pl-totals .tot-inv {
+          white-space: nowrap;
+        }
+        #entry .pl-totals .tot-inv {
+          text-align: right;
+        }
+        /* Add / View বাটন */
+        #entry #viewAdded,
+        #entry .addbar #addRow,
+        #entry .pl:not(.hd) > .row-add {
+          border-radius: 999px;
+        }
+        #entry #viewAdded {
+          background: var(--m-mint);
+          border: 1.5px solid var(--m-teal);
+          color: var(--m-teal-deep);
+          font-weight: 700;
+          box-shadow: none;
+        }
+        #entry .pl:not(.hd) > .row-add {
+          background: linear-gradient(135deg, var(--m-navy), var(--m-teal-deep));
+          border-color: transparent;
+          color: #fff;
+          font-weight: 700;
+        }
+        /* সাজেশন ড্রপডাউন: বাইরের বক্সও গোল, ভেতরের আইটেম বর্ডারহীন — তাই
+           পিলের কোণায় চৌকো ব্যাকগ্রাউন্ড আর দেখা যায় না */
+        #entry #chemistSuggestions,
+        #entry #adminEmpSuggestions,
+        #entry .product-suggestions,
+        #entry .date-suggestions {
+          border: 1.5px solid var(--m-line);
+          border-radius: 18px;
+          background: #fff;
+          padding: 5px;
+          overflow-x: hidden;
+          box-shadow: 0 16px 30px -12px rgba(15, 42, 67, 0.45);
+        }
+        #entry .chemist-suggestion,
+        #entry .admin-emp-suggestion,
+        #entry .product-suggestion,
+        #entry .date-suggestion {
+          border: 0;
+          border-bottom: 1px solid #e6efed;
+          border-radius: 12px;
+          padding: 9px 12px;
+          background: #fff;
+          box-shadow: none;
+        }
+        #entry .chemist-suggestion:last-child,
+        #entry .admin-emp-suggestion:last-child,
+        #entry .product-suggestion:last-child,
+        #entry .date-suggestion:last-child {
+          border-bottom: 0;
+        }
+        #entry .chemist-suggestion:hover,
+        #entry .chemist-suggestion:focus-visible,
+        #entry .chemist-suggestion.active,
+        #entry .admin-emp-suggestion:hover,
+        #entry .admin-emp-suggestion:focus-visible,
+        #entry .admin-emp-suggestion.active,
+        #entry .product-suggestion:hover,
+        #entry .product-suggestion:focus-visible,
+        #entry .product-suggestion.active,
+        #entry .date-suggestion:hover,
+        #entry .date-suggestion:focus-visible,
+        #entry .date-suggestion.active {
+          background: var(--m-mint) !important;
+          color: var(--m-ink);
+          border-bottom-color: transparent;
+          box-shadow: inset 4px 0 0 var(--m-teal);
+        }
+        /* ফুটারে কোনো বাটন দেখানোর না থাকলে (Chemist ধাপ) খালি বার লুকানো */
+        #entry footer.df:has(> #viewAdded.post-search-hidden) {
+          display: none;
+        }
+        /* ডায়ালগ খোলার সময় নিচ থেকে উঠে আসা — ব্যবহারকারীর ক্লিকের উত্তরে */
+        dialog#entry[open] {
+          animation: m-sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @keyframes m-sheet-up {
+          from {
+            transform: translateY(28px);
+            opacity: 0;
+          }
+          to {
+            transform: none;
+            opacity: 1;
+          }
+        }
+      }
+      @media screen and (max-width: 720px) and (prefers-reduced-motion: reduce) {
+        dialog#entry[open] {
+          animation: none;
+        }
+        #entry input[type="text"] {
+          transition: none;
+        }
+      }
       @media print {
         dialog#entry,
         .toolbar {
@@ -2884,6 +3229,25 @@
         color: #0f356f;
         outline: 0;
         box-shadow: inset 4px 0 0 #1a3f7a;
+      }
+      .chemist-suggestion .cs-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        min-width: 0;
+      }
+      .chemist-suggestion .cs-terr {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin-left: auto;
+        overflow: hidden;
+        color: #1a3f7a;
+        font-size: 11px;
+        font-weight: 700;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .chemist-suggestion .cs-code,
       .chemist-suggestion .cs-addr {
@@ -8778,15 +9142,14 @@
           }
           return "";
         };
-        const CHEMIST_CACHE_PREFIX = "chemistCache_fs1_";
+        const CHEMIST_CACHE_PREFIX = "chemistCache_fs3_";
         const CHEMIST_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
         const chemistListMemory = new Map();
         let chemistFetchInFlight = null;
         function normalizeTerritoryId(value) {
           return String(value || "")
             .trim()
-            .toUpperCase()
-            .replace(/^N(?=DIN)/, "");
+            .toUpperCase();
         }
         function territoryCacheKey(territoryCode) {
           return CHEMIST_CACHE_PREFIX + normalizeTerritoryId(territoryCode);
@@ -9012,11 +9375,7 @@
         // Territory ID "NDIN…" বা "DIN…" যেভাবেই সেভ থাকুক, দুটোই ধরার জন্য
         function territoryVariants(territoryCode) {
           const raw = String(territoryCode || "").trim().toUpperCase();
-          const base = normalizeTerritoryId(raw);
-          if (!raw || !base) return [];
-          return Array.from(
-            new Set([raw, base, /^DIN/.test(base) ? "N" + base : base]),
-          );
+          return raw ? [raw] : [];
         }
         // Firestore "Chemist List" থেকে ওই Territory-র সব Chemist একবারে আনে।
         // প্রতিটা ডকুমেন্টে territoryIds নামে array আছে (ISV/INM/PHARMA-র সব
@@ -9057,6 +9416,9 @@
               code,
               name: String(c.chemistName || "").trim(),
               address: String(c.address || "").trim(),
+              territories: (Array.isArray(c.territoryIds) ? c.territoryIds : [])
+                .map((x) => String(x || "").trim())
+                .filter(Boolean),
             });
           });
           return Array.from(unique.values());
@@ -9113,12 +9475,26 @@
             panel.classList.remove("show");
             return;
           }
+          // শুধু বর্তমান MPO-র নিজের টেরিটোরির কোড মেলানো ও দেখানো হয়;
+          // কেমিস্টের অন্য টিমের টেরিটোরি সাজেশনে দেখানো হয় না
+          const myVariants = territoryVariants(currentTerritoryCode);
+          const ownTerritories = (chemist) =>
+            (chemist.territories || []).filter((t) =>
+              myVariants.includes(String(t).trim().toUpperCase()),
+            );
           const matches = chemists
-            .filter(
-              (chemist) =>
+            .filter((chemist) => {
+              if (
+                (chemist.territories || []).length &&
+                myVariants.length &&
+                !ownTerritories(chemist).length
+              )
+                return false;
+              return (
                 (chemist.code || "").toUpperCase().includes(normalizedQuery) ||
-                (chemist.name || "").toUpperCase().includes(normalizedQuery),
-            )
+                (chemist.name || "").toUpperCase().includes(normalizedQuery)
+              );
+            })
             .slice(0, 24);
           panel.replaceChildren(
             ...matches.map((chemist) => {
@@ -9133,13 +9509,21 @@
               const code = document.createElement("span");
               code.className = "cs-code";
               code.textContent = chemist.code || "-";
+              const terr = document.createElement("span");
+              terr.className = "cs-terr";
+              terr.textContent =
+                ownTerritories(chemist).join(", ") ||
+                (currentTerritoryCode || "");
+              const top = document.createElement("span");
+              top.className = "cs-top";
+              top.append(code, terr);
               const name = document.createElement("span");
               name.className = "cs-name";
               name.textContent = chemist.name || "-";
               const address = document.createElement("span");
               address.className = "cs-addr";
               address.textContent = chemist.address || "";
-              button.append(code, name, address);
+              button.append(top, name, address);
               button.addEventListener("click", () => {
                 $("de_ccode").value = chemist.code || "";
                 $("de_chemist").value = chemist.name || "";
