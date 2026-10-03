@@ -1672,6 +1672,49 @@
       #entry footer.df .sp {
         flex: 1;
       }
+      /* লগইনের পর ডায়ালগের একদম নিচে IPI NO ও NAME — মারকিউর মতো চলে */
+      #entry .emp-marquee {
+        flex: none;
+        overflow: hidden;
+        white-space: nowrap;
+        padding: 7px 0;
+        border-top: 1px solid #c9d3e3;
+        background: #eaf0fa;
+        color: #1a3f7a;
+        font-size: 13px;
+        font-weight: 700;
+        border-radius: 0 0 10px 10px;
+      }
+      #entry .emp-marquee[hidden] {
+        display: none;
+      }
+      #entry .emp-marquee-text {
+        display: inline-block;
+        padding-left: 100%;
+        animation: emp-marquee-scroll 16s linear infinite;
+      }
+      #entry .emp-marquee:hover .emp-marquee-text {
+        animation-play-state: paused;
+      }
+      @keyframes emp-marquee-scroll {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-100%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #entry .emp-marquee-text {
+          padding-left: 12px;
+          animation: none;
+        }
+      }
+      @media print {
+        #entry .emp-marquee {
+          display: none;
+        }
+      }
       #entry button {
         font: inherit;
         font-size: 14px;
@@ -4368,6 +4411,9 @@
             View
           </button>
         </footer>
+        <div id="empMarquee" class="emp-marquee" hidden aria-live="polite">
+          <span id="empMarqueeText" class="emp-marquee-text"></span>
+        </div>
       </form>
     </dialog>
 
@@ -5376,8 +5422,25 @@
         // Employee তথ্য একবার OK করা হলে (বা আগে থেকেই সংরক্ষিত থাকলে), প্রতি
         // ফর্মেই সেই তথ্য যাবে বলে বার বার দেখানোর দরকার নেই — শুধু Chemist
         // Code/Name/Address সেকশনই দেখানো থাকে।
+        // লগইনের পর (Employee ধাপ বাদে) নিচে "IPI NO | NAME" মারকিউ দেখায়
+        function updateEmpMarquee(sectionName) {
+          const bar = $("empMarquee");
+          if (!bar) return;
+          const name =
+            sectionName || $("entrySectionName").textContent.trim();
+          const ipi = ($("de_ipi").value || "").trim();
+          const mpo = ($("de_mpo").value || "").trim();
+          const show = name !== "Employee Information" && !!(ipi || mpo);
+          bar.hidden = !show;
+          if (!show) return;
+          const text =
+            "IPI NO: " + (ipi || "-") + "   |   NAME: " + (mpo || "-");
+          const el = $("empMarqueeText");
+          if (el.textContent !== text) el.textContent = text;
+        }
         function setEntrySection(name) {
           $("entrySectionName").textContent = name;
+          updateEmpMarquee(name);
           const brand = $("entryBrand");
           if (brand) brand.hidden = name !== "Employee Information";
           const dh = document.querySelector("#entry header.dh");
@@ -8996,6 +9059,7 @@
         }
         function updateTerritoryFields() {
           syncChemistCodeLock();
+          updateEmpMarquee();
           $("de_group").textContent = currentEmployeeInfo.team || "-";
           $("de_am").value = currentEmployeeInfo.amName || "";
           $("de_amIpi").textContent = currentEmployeeInfo.amIpi || "";
