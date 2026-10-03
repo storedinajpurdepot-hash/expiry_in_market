@@ -3970,6 +3970,76 @@
       #entry .row-nav-bar {
         display: none !important;
       }
+      /* মোবাইল: সব সাজেশন (Chemist / Product / Date / Admin MPO) আলাদা আলাদা
+         বাটনের মতো দেখায় — পূর্ণ বর্ডার, গোল কোণা, হালকা ছায়া, মাঝে ফাঁক */
+      @media screen and (max-width: 720px) {
+        #entry .chemist-suggestion,
+        #entry .admin-emp-suggestion,
+        #entry .product-suggestion,
+        #entry .date-suggestion,
+        #entry .chemist-suggestion:last-child,
+        #entry .admin-emp-suggestion:last-child,
+        #entry .product-suggestion:last-child,
+        #entry .date-suggestion:last-child {
+          border: 1.5px solid var(--m-line, #c6dcd9);
+          border-radius: 14px;
+          background: #fff;
+          box-shadow: 0 3px 8px -4px rgba(15, 42, 67, 0.4);
+          margin-bottom: 6px;
+        }
+        #entry .chemist-suggestion:last-child,
+        #entry .admin-emp-suggestion:last-child,
+        #entry .product-suggestion:last-child,
+        #entry .date-suggestion:last-child {
+          margin-bottom: 0;
+        }
+        #entry .chemist-suggestion:active,
+        #entry .admin-emp-suggestion:active,
+        #entry .product-suggestion:active,
+        #entry .date-suggestion:active {
+          transform: scale(0.985);
+        }
+        #entry .chemist-suggestion:hover,
+        #entry .chemist-suggestion:focus-visible,
+        #entry .chemist-suggestion.active,
+        #entry .admin-emp-suggestion:hover,
+        #entry .admin-emp-suggestion:focus-visible,
+        #entry .admin-emp-suggestion.active,
+        #entry .product-suggestion:hover,
+        #entry .product-suggestion:focus-visible,
+        #entry .product-suggestion.active,
+        #entry .date-suggestion:hover,
+        #entry .date-suggestion:focus-visible,
+        #entry .date-suggestion.active {
+          border-color: var(--m-teal, #0d8f8b);
+        }
+      }
+      /* Date of Mfg. / Date of Exp সাজেশন: পাশাপাশি বাটন (লাইন ভরলে নিচের লাইনে) */
+      #entry .date-suggestions {
+        white-space: normal;
+        text-align: left;
+        font-size: 0;
+      }
+      #entry .date-suggestions > .date-suggestion,
+      #entry .date-suggestions > .date-suggestion:last-child {
+        display: inline-block;
+        width: auto;
+        min-width: 64px;
+        margin: 3px;
+        padding: 8px 12px;
+        font-size: 13px;
+        text-align: center;
+        border: 1.5px solid var(--m-line, #c6dcd9);
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: none;
+      }
+      #entry .date-suggestions > .date-suggestion:hover,
+      #entry .date-suggestions > .date-suggestion:focus-visible,
+      #entry .date-suggestions > .date-suggestion.active {
+        border-color: var(--m-teal, #1a3f7a);
+        box-shadow: none;
+      }
 </style>
   </head>
   <body>
@@ -8968,10 +9038,18 @@
                     : 180;
               const openUp = below < Math.min(want, 140) && above > below;
               const space = Math.max(80, openUp ? above : below);
-              const left = Math.max(4, r.left);
-              const width = isProduct
-                ? Math.min(430, window.innerWidth - left - 10)
-                : Math.min(Math.max(r.width, 96), window.innerWidth - left - 4);
+              const isDate = !isChemist && !isAdminEmp && !isProduct;
+              // Date of Mfg./Exp: ইনপুটের চেয়ে চওড়া প্যানেল, যাতে সাজেশনগুলো
+              // পাশাপাশি (লাইনে লাইনে) বসে; স্ক্রিনের বাইরে গেলে বাঁয়ে সরানো হয়
+              const dateWidth = Math.min(window.innerWidth - 8, 320);
+              const left = isDate
+                ? Math.max(4, Math.min(r.left, window.innerWidth - dateWidth - 4))
+                : Math.max(4, r.left);
+              const width = isDate
+                ? dateWidth
+                : isProduct
+                  ? Math.min(430, window.innerWidth - left - 10)
+                  : Math.min(Math.max(r.width, 96), window.innerWidth - left - 4);
               panel.style.left = left + "px";
               panel.style.width = width + "px";
               panel.style.maxHeight = Math.min(want, space) + "px";
