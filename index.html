@@ -4040,6 +4040,19 @@
         border-color: var(--m-teal, #1a3f7a);
         box-shadow: none;
       }
+      /* মোবাইল: সাজেশনের পেছনের সাদা বক্স/বর্ডার/ছায়া নেই — শুধু বাটনগুলো ভাসবে */
+      @media screen and (max-width: 720px) {
+        #entry #chemistSuggestions,
+        #entry #adminEmpSuggestions,
+        #entry .product-suggestions,
+        #entry .date-suggestions {
+          background: transparent;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+          padding: 4px;
+        }
+      }
 </style>
   </head>
   <body>
@@ -5556,7 +5569,7 @@
           bar.hidden = !show;
           if (!show) return;
           const text =
-            "IPI NO: " + (ipi || "-") + "   |   NAME: " + (mpo || "-");
+            " " + (ipi || "-") + "   |  " + (mpo || "-");
           const el = $("empMarqueeText");
           if (el.textContent !== text) el.textContent = text;
         }
