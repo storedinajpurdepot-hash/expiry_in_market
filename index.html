@@ -9810,10 +9810,12 @@
           return record ? record.fields["PER PCS"] : undefined;
         };
         const productCache = new Map();
+        // প্রতিটা অগ্রাধিকারের জন্য একাধিক সম্ভাব্য নাম: ডেটাবেসে বানান ভুল
+        // থাকলেও (যেমন SINAVISION-এ "Norma Price") প্রডাক্ট আসে
         const productPriceBranches = [
           ["Flat_Rate"],
-          ["Normal Price"],
-          ["Without_Discount"],
+          ["Normal Price", "Norma Price"],
+          ["Without_Discount", "Without Discount"],
         ];
         const productCategories = (territoryCode) => {
           const code = (territoryCode || "").trim().toUpperCase();
@@ -9863,19 +9865,21 @@
           const records = [];
           await Promise.all(
             categories.flatMap((category) =>
-              productPriceBranches.map(async (branch, priority) => {
-                try {
-                  const data = await getJSON(
-                    PRODUCT_ROOT +
-                      "/" +
-                      encodeURIComponent(category) +
-                      "/" +
-                      encodeURIComponent(branch) +
-                      ".json",
-                  );
-                  collectProductRecords(data, records, priority);
-                } catch (e) {}
-              }),
+              productPriceBranches.flatMap((branchNames, priority) =>
+                branchNames.map(async (branch) => {
+                  try {
+                    const data = await getJSON(
+                      PRODUCT_ROOT +
+                        "/" +
+                        encodeURIComponent(category) +
+                        "/" +
+                        encodeURIComponent(branch) +
+                        ".json",
+                    );
+                    collectProductRecords(data, records, priority);
+                  } catch (e) {}
+                }),
+              ),
             ),
           );
           const dedupeKey = (record) => {
