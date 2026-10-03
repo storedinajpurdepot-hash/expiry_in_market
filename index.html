@@ -8084,7 +8084,8 @@
             p.get("viewDate") ||
             p.get("viewKey") ||
             p.get("allPrint") ||
-            p.get("summaryPrint")
+            p.get("summaryPrint") ||
+            p.get("blankForm")
           ) {
             if (__pendingView) location.reload();
             else location.href = location.pathname;
