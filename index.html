@@ -3918,7 +3918,59 @@
       #entry #empOk:hover:not(:disabled) {
         filter: none;
       }
-    </style>
+          /* মোবাইল: Batch No. / Date of Mfg. / Date of Exp / Quantity লেখাগুলো আলাদা
+         হেডার-সারিতে না রেখে প্রতিটা ইনপুটের ঠিক উপরে, কার্ডের ভেতরেই দেখানো হয় */
+      @media screen and (max-width: 720px) {
+        #entry .pl.hd {
+          display: none;
+        }
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.batch-no),
+        #entry .pl:not(.hd) > .date-suggest-field:has(input.mfg-date),
+        #entry .pl:not(.hd) > .date-suggest-field:has(input.exp-date),
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.quantity) {
+          position: relative;
+          padding-top: 16px;
+        }
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.batch-no)::before,
+        #entry .pl:not(.hd) > .date-suggest-field:has(input.mfg-date)::before,
+        #entry .pl:not(.hd) > .date-suggest-field:has(input.exp-date)::before,
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.quantity)::before {
+          position: absolute;
+          top: 0;
+          left: 6px;
+          right: 2px;
+          overflow: hidden;
+          color: #4a6377;
+          font-size: 10.5px;
+          font-weight: 700;
+          line-height: 14px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          pointer-events: none;
+        }
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.batch-no)::before {
+          content: "Batch No.";
+        }
+        #entry .pl:not(.hd) > .date-suggest-field:has(input.mfg-date)::before {
+          content: "Date of Mfg.";
+        }
+        #entry .pl:not(.hd) > .date-suggest-field:has(input.exp-date)::before {
+          content: "Date of Exp";
+        }
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.quantity)::before {
+          content: "Quantity";
+        }
+        /* লেবেলের জন্য উপরে জায়গা বাড়ায় × বাটন ইনপুটের মাঝে রাখতে একটু নামানো */
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.batch-no) > .clear-x-btn,
+        #entry .pl:not(.hd) > .clear-x-wrap:has(input.quantity) > .clear-x-btn {
+          top: calc(50% + 8px);
+        }
+      }
+      /* ▼ (পরের ঘরে যান) ফ্লোটিং বাটন লুকানো। কীবোর্ডের Arrow Down আগের মতোই কাজ করে */
+      #entry .row-nav-bar {
+        display: none !important;
+      }
+</style>
   </head>
   <body>
     <div class="toolbar">
