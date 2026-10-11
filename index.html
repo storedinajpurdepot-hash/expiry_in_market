@@ -9018,11 +9018,13 @@
                 const bg = "background:#e8eef8;font-weight:700;";
                 const tdL = document.createElement("td");
                 tdL.colSpan = 5;
-                tdL.style.cssText = bg + "text-align:right;padding-right:14px";
+                tdL.style.cssText =
+                  bg + "text-align:right;padding-right:14px;letter-spacing:0.5px;word-spacing:4px";
+                // নন-ব্রেকিং স্পেস (\u00a0) দিয়ে ফাঁকা রাখা হয়েছে, নইলে HTML একাধিক স্পেস এক করে ফেলে
                 tdL.textContent =
-                  "AREA : " +
+                  "AREA\u00a0\u00a0:\u00a0\u00a0" +
                   String(a).toUpperCase() +
-                  "  ,  TOTAL CHEMIST : " +
+                  "\u00a0\u00a0\u00a0\u00a0,\u00a0\u00a0\u00a0\u00a0TOTAL\u00a0CHEMIST\u00a0\u00a0:\u00a0\u00a0" +
                   g.rows.length;
                 const tdV = document.createElement("td");
                 tdV.style.cssText =
