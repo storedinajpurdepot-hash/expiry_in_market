@@ -1769,6 +1769,16 @@
       #entry .pl input[type="text"]::placeholder {
         color: transparent;
       }
+      /* Mfg/Exp সাজেশন খোলা থাকলে Add / View / Per Pcs / Pack Size লুকানো
+         (visibility, যাতে লেআউট না নড়ে) */
+      @media (max-width: 720px) {
+        dialog#entry.date-sugg-open #addMeta,
+        dialog#entry.date-sugg-open #addRow,
+        dialog#entry.date-sugg-open #viewAdded,
+        dialog#entry.date-sugg-open .row-add {
+          visibility: hidden;
+        }
+      }
       @media (max-width: 720px) {
         dialog#entry,
         dialog#entry.wide-mode {
@@ -2776,6 +2786,25 @@
       }
       dialog#viewDlg::backdrop {
         background: rgba(0, 0, 0, 0.45);
+      }
+      /* Product List-এ Chemist তথ্য লুকানো; শুধু Product Preview-তে দেখাবে */
+      #entry #chemistSummary {
+        display: none !important;
+      }
+      #viewDlg .vd-chemist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+        margin: 0 0 10px;
+        padding: 8px 10px;
+        background: #f1f5fb;
+        border: 1px solid #d5deee;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #222;
+      }
+      #viewDlg .vd-chemist strong {
+        color: #1a3f7a;
       }
       #viewDlg .vd-body {
         padding: 18px 20px 8px;
@@ -4709,6 +4738,11 @@
     <dialog id="viewDlg" aria-labelledby="vdTitle">
       <div class="vd-body">
         <h2 id="vdTitle">Product Preview</h2>
+        <div class="vd-chemist" id="vdChemist">
+          <span><strong>Chemist Code:</strong> <span id="vdCcode">-</span></span>
+          <span><strong>Name:</strong> <span id="vdChemistName">-</span></span>
+          <span><strong>Address:</strong> <span id="vdAddr">-</span></span>
+        </div>
         <div class="vd-table-wrap">
           <table>
             <thead>
@@ -8908,6 +8942,9 @@
             );
             return;
           }
+          $("vdCcode").textContent = $("de_ccode").value.trim() || "-";
+          $("vdChemistName").textContent = $("de_chemist").value.trim() || "-";
+          $("vdAddr").textContent = $("de_addr").value.trim() || "-";
           dlg.close();
           renderViewTable(data);
           // dlg.close()-এর ঠিক পরে একই টিক-এ viewDlg.showModal() ডাকলে কিছু
@@ -9063,6 +9100,28 @@
                 : isProduct
                   ? Math.min(430, window.innerWidth - left - 10)
                   : Math.min(Math.max(r.width, 96), window.innerWidth - left - 4);
+              // প্রোডাক্ট সাজেশন: ডেস্কটপে সারির পাশে (ডানে, জায়গা না থাকলে বাঁয়ে) দেখায়;
+              // পাশে জায়গা না থাকলে বা মোবাইলে আগের মতো নিচে/ওপরে
+              if (isProduct && window.innerWidth > 720) {
+                const GAP = 8,
+                  MINW = 260;
+                const rr = (anchor.closest(".pl") || anchor).getBoundingClientRect();
+                const roomR = window.innerWidth - rr.right - GAP - 6;
+                const roomL = rr.left - GAP - 6;
+                if (roomR >= MINW || roomL >= MINW) {
+                  const useRight = roomR >= roomL;
+                  const w = Math.min(430, useRight ? roomR : roomL);
+                  const maxH = Math.min(want, vh - 20);
+                  panel.style.width = w + "px";
+                  panel.style.left =
+                    (useRight ? rr.right + GAP : rr.left - GAP - w) + "px";
+                  panel.style.maxHeight = maxH + "px";
+                  panel.style.top =
+                    Math.max(10, Math.min(r.top, vh - maxH - 10)) + "px";
+                  panel.style.bottom = "auto";
+                  return;
+                }
+              }
               panel.style.left = left + "px";
               panel.style.width = width + "px";
               panel.style.maxHeight = Math.min(want, space) + "px";
@@ -9913,12 +9972,22 @@
           try {
             const values = await getProductSuggestions();
             const query = input.value.trim().toUpperCase();
+            const rankOf = (record) => {
+              const name = record.name.toUpperCase();
+              const code = (record.fields.CODE || "").toUpperCase();
+              if (name.startsWith(query)) return 0;
+              if (code.startsWith(query)) return 1;
+              if (name.split(/[\s\-_/().,]+/).some((w) => w.startsWith(query)))
+                return 2;
+              if (name.includes(query)) return 3;
+              if (code.includes(query)) return 4;
+              return -1;
+            };
             const matches = values
-              .filter((record) => {
-                const name = record.name.toUpperCase();
-                const code = (record.fields.CODE || "").toUpperCase();
-                return name.includes(query) || code.includes(query);
-              })
+              .map((record) => ({ record, rank: rankOf(record) }))
+              .filter((x) => x.rank >= 0)
+              .sort((a, b) => a.rank - b.rank)
+              .map((x) => x.record)
               .slice(0, 12);
             panel.replaceChildren(
               ...matches.map((record) => {
@@ -11374,6 +11443,20 @@
           }
         }
         placeButtons(mobile.matches);
+        {
+          const entryDlg = document.getElementById("entry");
+          const syncDateSuggOpen = () => {
+            const open = Array.from(
+              entryDlg.querySelectorAll(".date-suggestions"),
+            ).some((p) => p.style.display === "block");
+            entryDlg.classList.toggle("date-sugg-open", open);
+          };
+          new MutationObserver(syncDateSuggOpen).observe(entryDlg, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["style"],
+          });
+        }
         const rowObserver = new MutationObserver(() => {
           if (mobile.matches) placeViewBesideRowAdd();
         });
@@ -11419,7 +11502,16 @@
         }
         window.fitPagesToScreen = fitPagesToScreen;
         window.addEventListener("load", fitPagesToScreen);
-        window.addEventListener("resize", fitPagesToScreen);
+        // কিবোর্ড খুললে/বন্ধ হলে শুধু উচ্চতা বদলায় (resize ইভেন্ট আসে);
+        // তখন পেজ রি-স্কেল করলে স্ক্রিন লাফিয়ে উপরে যায়। তাই শুধু
+        // প্রস্থ বদলালে (রোটেশন/উইন্ডো রিসাইজ) আবার ফিট করা হবে।
+        var lastFitWidth = document.documentElement.clientWidth;
+        window.addEventListener("resize", function () {
+          var w = document.documentElement.clientWidth;
+          if (w === lastFitWidth) return;
+          lastFitWidth = w;
+          fitPagesToScreen();
+        });
         window.addEventListener("orientationchange", fitPagesToScreen);
         window.addEventListener("afterprint", fitPagesToScreen);
         // মোবাইলে স্ক্রিনে ছোট করে (scale) দেখানো transform-টা প্রিন্ট শুরুর
