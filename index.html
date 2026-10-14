@@ -314,6 +314,20 @@
         background: #1a3f7a;
         color: #fff;
       }
+      #sigDlg button.sig-refresh {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+      }
+      #sigDlg button.sig-refresh.spinning svg {
+        animation: sigSpin 0.8s linear infinite;
+      }
+      @keyframes sigSpin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
       #sigDlg #sigErr {
         min-height: 16px;
         margin-top: 6px;
@@ -1333,7 +1347,32 @@
         display: none !important;
       }
       #entry .emp-row.ipi-row {
-        grid-template-columns: 120px minmax(0, 1fr);
+        grid-template-columns: 170px minmax(0, 1fr);
+      }
+      #entry .ipi-input-wrap {
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+      }
+      #entry .ipi-input-wrap input {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      #entry .ipi-search-btn {
+        flex: 0 0 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        margin: 0;
+        border: 1px solid #1a3f7a;
+        border-radius: 4px;
+        background: #1a3f7a;
+        color: #fff;
+        cursor: pointer;
+      }
+      #entry .ipi-search-btn:hover {
+        background: #0f2a55;
       }
       #entry .emp-row.ipi-row > div {
         min-width: 0;
@@ -1400,7 +1439,8 @@
         font-weight: 700;
         margin-bottom: 3px;
       }
-      #entry input[type="text"] {
+      #entry input[type="text"],
+      #entry input[type="password"] {
         width: 100%;
         font: inherit;
         font-size: 14px;
@@ -1410,7 +1450,8 @@
         background: #fff;
         color: #111;
       }
-      #entry input[type="text"]:focus {
+      #entry input[type="text"]:focus,
+      #entry input[type="password"]:focus {
         outline: 2px solid #1a3f7a;
         outline-offset: 0;
         border-color: #1a3f7a;
@@ -1675,15 +1716,60 @@
       /* লগইনের পর ডায়ালগের একদম নিচে IPI NO ও NAME — মারকিউর মতো চলে */
       #entry .emp-marquee {
         flex: none;
+        position: relative;
         overflow: hidden;
         white-space: nowrap;
-        padding: 7px 0;
-        border-top: 1px solid #c9d3e3;
-        background: #eaf0fa;
-        color: #1a3f7a;
+        padding: 6px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.35);
+        background: linear-gradient(90deg, #0f2a55 0%, #1a3f7a 45%, #3b78c9 100%);
+        box-shadow: 0 -2px 8px rgba(15, 42, 85, 0.28);
+        color: #fff;
         font-size: 13px;
-        font-weight: 700;
+        font-weight: 600;
         border-radius: 0 0 10px 10px;
+      }
+      /* দুই পাশে ফেড-আউট */
+      #entry .emp-marquee::before,
+      #entry .emp-marquee::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 28px;
+        z-index: 1;
+        pointer-events: none;
+      }
+      #entry .emp-marquee::before {
+        left: 0;
+        background: linear-gradient(90deg, #0f2a55, rgba(15, 42, 85, 0));
+      }
+      #entry .emp-marquee::after {
+        right: 0;
+        background: linear-gradient(270deg, #3b78c9, rgba(59, 120, 201, 0));
+      }
+      #entry .emp-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-right: 10px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        line-height: 1.5;
+        vertical-align: middle;
+      }
+      #entry .emp-chip-ipi {
+        background: #e3eeff;
+        color: #1558c0;
+      }
+      #entry .emp-chip-name {
+        background: #fff;
+        color: #0b0b0b;
+        font-size: 14.5px;
+        font-weight: 800;
+      }
+      #entry .emp-chip-terr {
+        background: #e2f6e7;
+        color: #146c2e;
       }
       #entry .emp-marquee[hidden] {
         display: none;
@@ -2011,7 +2097,8 @@
           flex-direction: column;
           gap: 4px;
         }
-        #entry input[type="text"] {
+        #entry input[type="text"],
+        #entry input[type="password"] {
           font-size: 16px;
         }
         #entry #chemistFieldsBlock input[type="text"]::placeholder {
@@ -2177,7 +2264,8 @@
           color: var(--m-ink);
           margin: 0 0 5px 3px;
         }
-        #entry input[type="text"] {
+        #entry input[type="text"],
+        #entry input[type="password"] {
           border: 1.5px solid var(--m-line);
           border-radius: 14px;
           color: var(--m-ink);
@@ -2186,7 +2274,8 @@
             border-color 0.15s ease,
             box-shadow 0.15s ease;
         }
-        #entry input[type="text"]:focus {
+        #entry input[type="text"]:focus,
+        #entry input[type="password"]:focus {
           outline: 0;
           border-color: var(--m-teal);
           box-shadow: 0 0 0 4px rgba(13, 143, 139, 0.2);
@@ -2209,7 +2298,8 @@
         }
         #entry button.ok:focus-visible,
         #entry footer.df button:focus-visible,
-        #entry input[type="text"]:focus-visible {
+        #entry input[type="text"]:focus-visible,
+        #entry input[type="password"]:focus-visible {
           outline-color: var(--m-teal);
         }
         #entry .chemist-summary {
@@ -2416,7 +2506,8 @@
         dialog#entry[open] {
           animation: none;
         }
-        #entry input[type="text"] {
+        #entry input[type="text"],
+        #entry input[type="password"] {
           transition: none;
         }
       }
@@ -4331,13 +4422,27 @@
               <div class="emp-row ipi-row">
                 <div>
                   <label class="f" for="de_ipi">IPI NO</label
-                  ><input
-                    type="text"
-                    id="de_ipi"
-                    autocomplete="off"
-                    placeholder="IPI-××××××"
-                    spellcheck="false"
-                  />
+                  ><div class="ipi-input-wrap">
+                    <input
+                      type="text"
+                      id="de_ipi"
+                      autocomplete="off"
+                      placeholder="IPI-××××××"
+                      spellcheck="false"
+                    />
+                    <button
+                      type="button"
+                      id="ipiSearchBtn"
+                      class="ipi-search-btn"
+                      title="খুঁজুন"
+                      aria-label="IPI খুঁজুন"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label class="f" id="mpoLabel" for="de_mpo">Name of MPO</label
@@ -4418,7 +4523,7 @@
               </div>
               <div class="emp-row admin-pass-row" id="adminPassRow" hidden>
                 <div>
-                  <label class="f" for="de_adminPass">Admin Password</label
+                  <label class="f" for="de_adminPass" id="adminPassLabel">Admin Password</label
                   ><input
                     type="password"
                     id="de_adminPass"
@@ -4765,6 +4870,20 @@
             </svg>
           </button>
           <input type="file" id="sigFile" accept="image/*" hidden />
+          <span class="sp"></span>
+          <button
+            type="button"
+            id="sigRefresh"
+            class="sig-refresh"
+            title="রিফ্রেশ করে Employee Information-এ ফিরুন"
+            aria-label="রিফ্রেশ"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
           <span class="sp"></span>
           <button type="button" id="sigCancel" hidden>বাতিল</button>
           <button type="button" id="sigOk" class="ok">Save</button>
@@ -6221,10 +6340,32 @@
           const show = name !== "Employee Information" && !!(ipi || mpo);
           bar.hidden = !show;
           if (!show) return;
-          const text =
-            " " + (ipi || "-") + "   |  " + (mpo || "-");
+          // ফরম্যাট: IPI NO -004686, নাম, TERRITORY : টেরিটরি নাম-কোড
+          const ipiNum = ipi.replace(/^IPI/i, "").replace(/^\s*-?\s*/, "");
+          const tName = (currentEmployeeInfo.territoryName || "").trim();
+          const tCode = (
+            currentEmployeeInfo.territoryCode ||
+            currentTerritoryCode ||
+            ""
+          ).trim();
+          const terr = [tName, tCode].filter(Boolean).join("-") || "-";
+          const parts = [
+            ["emp-chip-ipi", "🪪", "IPI NO -" + (ipiNum || "-")],
+            ["emp-chip-name", "👤", mpo || "-"],
+            ["emp-chip-terr", "📍", "TERRITORY : " + terr],
+          ];
+          const key = parts.map((x) => x[2]).join("\u0001");
           const el = $("empMarqueeText");
-          if (el.textContent !== text) el.textContent = text;
+          if (el.dataset.key === key) return;
+          el.dataset.key = key;
+          el.replaceChildren(
+            ...parts.map(([cls, icon, txt]) => {
+              const chip = document.createElement("span");
+              chip.className = "emp-chip " + cls;
+              chip.textContent = icon + " " + txt;
+              return chip;
+            }),
+          );
         }
         function setEntrySection(name) {
           $("entrySectionName").textContent = name;
@@ -6323,6 +6464,15 @@
           // এখন চলমান/অপেক্ষমাণ খোঁজা শেষ হওয়া পর্যন্ত অপেক্ষা করে তারপর যাচাই।
           // লুপ: অপেক্ষার মধ্যে নতুন লুকআপ শুরু হলে (যেমন মোবাইলে কীবোর্ড নামার
           // পর change ইভেন্ট) সেটাও শেষ হওয়া পর্যন্ত অপেক্ষা করে, তাই এক ক্লিকেই কাজ হয়
+          // সার্চ বাটন না চেপেই OK চাপলে (পাসওয়ার্ড এড়ানো ঠেকাতে) আগে এই IPI খোঁজা হয়
+          {
+            const cur = $("de_ipi").value.trim();
+            if (cur && norm(cur) !== lastLookedIpi && lookupInFlight === 0) {
+              clearTimeout(timer);
+              lookupTimerActive = false;
+              lookupRun = lookup();
+            }
+          }
           for (let n = 0; n < 6; n++) {
             if (lookupTimerActive) {
               clearTimeout(timer);
@@ -6370,6 +6520,25 @@
             isAdmin = true;
             adminViewAs = "ADMIN";
           } else {
+            if (pendingPassRecord) {
+              const storedPass = String(
+                pick(pendingPassRecord, "PASSWORD") || "",
+              ).trim();
+              if (storedPass) {
+                const enteredPass = $("de_adminPass").value.trim();
+                if (!enteredPass) {
+                  setSt("err", "পাসওয়ার্ড দিন।");
+                  $("de_adminPass").focus();
+                  return;
+                }
+                if (enteredPass !== storedPass) {
+                  setSt("err", "পাসওয়ার্ড সঠিক নয়।");
+                  $("de_adminPass").value = "";
+                  $("de_adminPass").focus();
+                  return;
+                }
+              }
+            }
             isAdmin = false;
           }
           syncChemistCodeLock();
@@ -6933,8 +7102,16 @@
           if (!f) return;
           const img = new Image();
           img.onload = () => {
-            sigProcess(img, 0, 0, img.width, img.height);
-            URL.revokeObjectURL(img.src);
+            try {
+              sigProcess(img, 0, 0, img.naturalWidth, img.naturalHeight);
+            } catch (err) {
+              showMessage("ছবি প্রসেস করা যায়নি, আবার চেষ্টা করুন।", "error");
+            } finally {
+              URL.revokeObjectURL(img.src);
+              // সই-বক্স (ক্যানভাস) দেখানো — আগে এটা লুকানো থাকত বলে গ্যালারির ছবি দেখা যেত না
+              sigPad.style.display = "";
+              sigPromptRefresh();
+            }
           };
           img.onerror = () => {
             showMessage("ছবিটি পড়া যায়নি, আবার চেষ্টা করুন।", "error");
@@ -9133,6 +9310,8 @@
         $("entryPanelRefresh").onclick = () =>
           refreshAndReenter($("entryPanelRefresh"));
         $("rdRefresh").onclick = () => refreshAndReenter($("rdRefresh"));
+        // সই (স্বাক্ষর) ডায়ালগে Save-এর বামে রিফ্রেশ: রিফ্রেশ হয়ে Employee Information-এ ফেরে
+        $("sigRefresh").onclick = () => refreshAndReenter($("sigRefresh"));
         // ===== Zone/Region প্যানেল: Year সিলেক্ট করে Summary =====
         // Exp সাল (row[3] = "Sep-26" ফরম্যাট) মিলিয়ে শুধু সেই সালের মেয়াদোত্তীর্ণ
         // পণ্যের ভ্যালু, ফার্মেসি (নাম ও কোড) ধরে যোগ করে Value Wise Summary ফর্মে বসায়।
@@ -10189,6 +10368,10 @@
           // চাওয়া হয় ও যাচাই হয় ----
           isAdmin = false,
           pendingAdminRecord = null,
+          // ---- সাধারণ কর্মী (MPO ইত্যাদি)-র পাসওয়ার্ড রেকর্ড (Emp_Password নোড) ----
+          pendingPassRecord = null,
+          // সর্বশেষ যে IPI-র খোঁজা (lookup) হয়েছে — OK চাপার সময় না হয়ে থাকলে আগে খোঁজা হয়
+          lastLookedIpi = "",
           // ---- AM যখন নিজের অধীনস্থ MPO-র হয়ে এন্ট্রি দেয়: ফর্মের IPI/MPO/AM/
           // টেরিটরি তখন সেই MPO-র তথ্যে বদলে যায়, কিন্তু AM-এর নিজের পরিচয় (রোল,
           // সই, রিপোর্ট ফিল্টার) এখানে আলাদা রাখা হয় ----
@@ -11497,6 +11680,35 @@
           }
         }
 
+        // ---- সাধারণ কর্মীর পাসওয়ার্ড রেকর্ড: একই Emp_Password নোড, তবে
+        // DESIGNATION যা-ই হোক (MPO সহ) রেকর্ডটা ফেরত দেয়। নোডে না থাকলে বা
+        // এরর হলে null — তখন পাসওয়ার্ড চাওয়া হয় না ----
+        async function findPasswordRecord(ipi) {
+          const base = PRODUCT_DB + "/" + ADMIN_PATH + ".json";
+          const q =
+            "?orderBy=" +
+            encodeURIComponent('"$key"') +
+            "&startAt=" +
+            encodeURIComponent('"' + ipi + '"') +
+            "&endAt=" +
+            encodeURIComponent('"' + ipi + '\uf8ff"');
+          try {
+            const data = await getJSON(base + q);
+            const key = Object.keys(data || {}).find(
+              (k) => k === ipi || k.startsWith(ipi + "_"),
+            );
+            return key ? data[key] : null;
+          } catch (e) {
+            return null;
+          }
+        }
+        // পাসওয়ার্ড ঘর দেখানো/লুকানো (Admin মোড ছাড়া সাধারণ কর্মীর জন্য)
+        function setPassRow(on) {
+          $("adminPassRow").hidden = !on;
+          $("adminPassLabel").textContent = on ? "Password" : "Admin Password";
+          if (!on) $("de_adminPass").value = "";
+        }
+
         // ---- OK বাটন: IPI-র খোঁজা (লুকআপ) শেষ না হওয়া পর্যন্ত ঝাপসা ও নিষ্ক্রিয় ----
         let lookupInFlight = 0;
         function refreshOk() {
@@ -11520,15 +11732,18 @@
           currentEmployeeInfo = {};
           currentTerritoryCode = "";
           updateTerritoryFields();
+          pendingPassRecord = null;
           if (raw.length < 3) {
             dropAuto();
             setAdminMode(false);
+            setPassRow(false);
             pendingAdminRecord = null;
             st.className = "ipiStatus";
             st.textContent = "";
             return;
           }
           const ipi = norm(raw);
+          lastLookedIpi = ipi;
           setSt("load", "খোঁজা হচ্ছে…");
           // ---- Admin চেক: রেগুলার এমপ্লয়ি লুকআপের পাশাপাশি, IPI নাম্বারটা
           // Emp_Password নোডে আছে কি না দেখা হয়। থাকলে ডায়ালগ Admin মোডে
@@ -11547,10 +11762,18 @@
               setAdminMode(false);
               return null;
             });
+          const passPromise = findPasswordRecord(ipi);
           try {
             const rec = await findRecord(ipi);
             const adminRec = await adminPromise;
+            const passRec = await passPromise;
             if (mine !== seq) return;
+            // Admin নয়, কিন্তু Emp_Password নোডে রেকর্ড আছে (যেমন MPO) —
+            // পাসওয়ার্ড ঘর দেখানো হয়, OK চাপলে যাচাই হবে
+            if (!adminRec && passRec) {
+              pendingPassRecord = passRec;
+              setPassRow(true);
+            }
             if (!rec) {
               if (adminRec) {
                 // অ্যাডমিন-শুধু IPI (রেগুলার এমপ্লয়ি তালিকায় নেই) —
@@ -11991,35 +12214,71 @@
           }
         });
 
+        // Name of MPO ঘর: নাম যত বড়ই হোক, লেখা ভাঙবে না — ঘরে না ধরলে ফন্ট
+        // ছোট হয়ে ঘরের ভেতরেই এঁটে যাবে (ঘর ছোট/বড় হলে বা মান বদলালে আবার ফিট)
+        function autoFitInput(inp) {
+          if (!inp) return;
+          const desc = Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,
+            "value",
+          );
+          let busy = false;
+          const fit = () => {
+            if (busy) return;
+            busy = true;
+            inp.style.fontSize = "";
+            const base = parseFloat(getComputedStyle(inp).fontSize) || 14;
+            if (inp.clientWidth > 0) {
+              let size = base;
+              while (inp.scrollWidth > inp.clientWidth + 1 && size > 7) {
+                size -= 0.5;
+                inp.style.fontSize = size + "px";
+              }
+            }
+            busy = false;
+          };
+          Object.defineProperty(inp, "value", {
+            configurable: true,
+            get() {
+              return desc.get.call(this);
+            },
+            set(v) {
+              desc.set.call(this, v);
+              fit();
+            },
+          });
+          inp.addEventListener("input", fit);
+          if (window.ResizeObserver) new ResizeObserver(fit).observe(inp);
+          fit();
+        }
+        autoFitInput($("de_mpo"));
+        autoFitInput($("mpo"));
+
+        // টাইপ করার সময় অটো খোঁজা/অটো ০০ যোগ হয় না; শুধু সার্চ বাটনে ক্লিক
+        // (বা Enter) করলে খোঁজে। টাইপ বদলালে আগের খোঁজার ফলাফল মুছে যায়।
         $("de_ipi").addEventListener("input", () => {
           clearTimeout(timer);
+          lookupTimerActive = false;
           seq += 1;
           currentEmployeeInfo = {};
           currentTerritoryCode = "";
           updateTerritoryFields();
           pendingAdminRecord = null;
+          pendingPassRecord = null;
+          lastLookedIpi = "";
           setAdminMode(false);
-          lookupTimerActive = true;
+          setPassRow(false);
+          dropAuto();
+          st.className = "ipiStatus";
+          st.textContent = "";
           refreshOk();
-          timer = setTimeout(() => {
-            lookupTimerActive = false;
-            lookupRun = lookup();
-          }, 600);
         });
-        $("de_ipi").addEventListener("change", () => {
-          // OK বাটনে চাপ দিলে বক্স থেকে ফোকাস সরে (blur) এই change ইভেন্টটাও
-          // ঘটে। IPI ততক্ষণে সফলভাবে খোঁজা হয়ে গিয়ে থাকলে ও কিছু বদলায়নি
-          // থাকলে আবার নতুন করে খোঁজা শুরু করার দরকার নেই — এটাই আগে পুরো
-          // তথ্য মুহূর্তের জন্য মুছে "খোঁজা হচ্ছে…" দেখাত ও OK দুইবার
-          // চাপতে হতো (আসলে একবারই যথেষ্ট, শুধু বাড়তি খোঁজাটা শেষ হওয়া
-          // পর্যন্ত অপেক্ষা করতে হতো)।
-          const val = norm($("de_ipi").value.trim());
-          const already =
-            !lookupTimerActive &&
-            !lookupInFlight &&
-            currentEmployeeInfo.ipi &&
-            norm(currentEmployeeInfo.ipi) === val;
-          if (already) return;
+        // সার্চ আইকনে ক্লিক করলে ৬০০ms অপেক্ষা না করে সঙ্গে সঙ্গে খোঁজে
+        $("ipiSearchBtn").addEventListener("click", () => {
+          if (!$("de_ipi").value.trim()) {
+            $("de_ipi").focus();
+            return;
+          }
           clearTimeout(timer);
           lookupTimerActive = false;
           lookupRun = lookup();
@@ -12036,6 +12295,10 @@
           }
           if (e.target.id === "de_ccode") {
             searchChemist();
+            return;
+          }
+          if (e.target.id === "de_ipi") {
+            $("ipiSearchBtn").click();
             return;
           }
           const all = Array.from(dlg.querySelectorAll("input[type=text]"));
