@@ -1199,10 +1199,14 @@
       #entry #entryBrand + header.dh {
         border-top: 0;
       }
+      #entry #entryBrand + header.dh.dh-center {
+        padding-top: 6px;
+      }
       #entry header.dh.dh-center {
         justify-content: center;
       }
       #entry header.dh.dh-center h2 {
+        position: relative;
         text-align: center;
       }
       #entry header.dh h2 .section-name {
@@ -1277,6 +1281,27 @@
         background: #fff;
         color: #111;
       }
+      .employee-role-select {
+        position: absolute;
+        right: calc(100% + 10px);
+        top: 50%;
+        transform: translateY(-50%);
+        width: min(210px, 46vw);
+        max-width: 210px;
+        margin: 0;
+        padding: 4px 9px;
+        border: 1px solid #1a3f7a;
+        border-radius: 6px;
+        background: #fff;
+        color: #1a3f7a;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        vertical-align: middle;
+      }
+      .employee-role-select[hidden] {
+        display: none;
+      }
       #entry header.dh .header-actions {
         display: flex;
         gap: 8px;
@@ -1347,7 +1372,7 @@
         display: none !important;
       }
       #entry .emp-row.ipi-row {
-        grid-template-columns: 170px minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       }
       #entry .ipi-input-wrap {
         display: flex;
@@ -1371,15 +1396,59 @@
         color: #fff;
         cursor: pointer;
       }
+      /* খোঁজার সময় পুরো স্ক্রিন ঝাপসা + মাঝখানে স্পিনার */
+      #entry .search-busy {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.35);
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        cursor: progress;
+      }
+      #entry .search-busy[hidden] {
+        display: none;
+      }
+      #entry .search-busy-spin {
+        width: 46px;
+        height: 46px;
+        border: 5px solid rgba(26, 63, 122, 0.2);
+        border-top-color: #1a3f7a;
+        border-radius: 50%;
+        animation: ipi-spin 0.8s linear infinite;
+      }
+      #entry .ipi-search-btn.loading svg {
+        animation: ipi-spin 0.8s linear infinite;
+      }
+      #entry .ipi-search-btn:disabled {
+        cursor: progress;
+        opacity: 0.85;
+      }
+      @keyframes ipi-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
       #entry .ipi-search-btn:hover {
         background: #0f2a55;
       }
       #entry .emp-row.ipi-row > div {
         min-width: 0;
       }
-      #entry .admin-pass-row > div {
+      #entry .emp-row.ipi-row .mpo-name-field {
         grid-column: 1 / -1;
-        max-width: 260px;
+      }
+      #entry .password-search-wrap {
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+      }
+      #entry .password-search-wrap input {
+        flex: 1 1 auto;
+        min-width: 0;
       }
       #entry .employee-lookup-value {
         display: block;
@@ -2174,6 +2243,24 @@
         }
         #entry header.dh h2 {
           min-width: 0;
+        }
+        #entry header.dh.dh-center h2 {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          width: 100%;
+        }
+        #entry header.dh.dh-center h2 .section-name {
+          order: 1;
+        }
+        #entry .employee-role-select {
+          order: 2;
+          position: static;
+          transform: none;
+          width: min(210px, 70vw);
+          max-width: 100%;
         }
         #entry header.dh h2 .panel-badge {
           margin-left: 8px;
@@ -4365,6 +4452,21 @@
         </div>
         <header class="dh dh-center">
           <h2 id="entryTitle">
+            <select
+              id="employeeRoleSelect"
+              class="employee-role-select"
+              required
+              aria-label="কর্মীর ধরন নির্বাচন"
+              title="IPI কোন তালিকায় খুঁজবেন তা নির্বাচন করুন"
+            >
+              <option value="">-- Select --</option>
+              <option value="MPO">MPO</option>
+              <option value="AM">AM</option>
+              <option value="ZONE">ZONE</option>
+              <option value="REGION">REGION</option>
+              <option value="DEPOT MANAGER">DEPOT MANAGER</option>
+              <option value="ADMIN_FIELD_FORCE">ADMIN</option>
+            </select>
             <span id="entrySectionName" class="section-name"
               >Employee Information</span
             >
@@ -4422,20 +4524,30 @@
               <div class="emp-row ipi-row">
                 <div>
                   <label class="f" for="de_ipi">IPI NO</label
-                  ><div class="ipi-input-wrap">
+                  /><input
+                    type="text"
+                    id="de_ipi"
+                    autocomplete="off"
+                    placeholder="IPI-××××××"
+                    spellcheck="false"
+                  />
+                </div>
+                <div class="password-search-field" id="adminPassRow">
+                  <label class="f" for="de_adminPass" id="adminPassLabel"
+                    >Password</label
+                  ><div class="password-search-wrap">
                     <input
-                      type="text"
-                      id="de_ipi"
+                      type="password"
+                      id="de_adminPass"
                       autocomplete="off"
-                      placeholder="IPI-××××××"
-                      spellcheck="false"
+                      placeholder="পাসওয়ার্ড দিন"
                     />
                     <button
                       type="button"
                       id="ipiSearchBtn"
                       class="ipi-search-btn"
                       title="খুঁজুন"
-                      aria-label="IPI খুঁজুন"
+                      aria-label="IPI ও পাসওয়ার্ড দিয়ে প্রবেশ"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="7"/>
@@ -4444,8 +4556,8 @@
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label class="f" id="mpoLabel" for="de_mpo">Name of MPO</label
+                <div class="mpo-name-field">
+                  <label class="f" id="mpoLabel" for="de_mpo">NAME OF MPO</label
                   ><input type="text" id="de_mpo" autocomplete="off" readonly />
                 </div>
               </div>
@@ -4519,17 +4631,6 @@
                     aria-live="polite"
                     >-</output
                   >
-                </div>
-              </div>
-              <div class="emp-row admin-pass-row" id="adminPassRow" hidden>
-                <div>
-                  <label class="f" for="de_adminPass" id="adminPassLabel">Admin Password</label
-                  ><input
-                    type="password"
-                    id="de_adminPass"
-                    autocomplete="off"
-                    placeholder="পাসওয়ার্ড দিন"
-                  />
                 </div>
               </div>
               <div
@@ -6289,6 +6390,7 @@
               JSON.stringify(
                 amProxy
                   ? {
+                      lookupRole: $("employeeRoleSelect").value,
                       ipi: amProxy.ipi,
                       mpo: amProxy.mpo,
                       wp_mpo: amProxy.wp_mpo,
@@ -6299,6 +6401,7 @@
                       isAdmin: false,
                     }
                   : {
+                      lookupRole: $("employeeRoleSelect").value,
                       ipi: $("de_ipi").value.trim(),
                       mpo: $("de_mpo").value.trim(),
                       wp_mpo: $("de_wp_mpo").value.trim(),
@@ -6348,11 +6451,17 @@
             currentTerritoryCode ||
             ""
           ).trim();
-          const terr = [tName, tCode].filter(Boolean).join("-") || "-";
+          const depotManager = currentEmployeeInfo.officeStaff;
+          const territoryLabel = depotManager
+            ? "DEPOT MANAGER"
+            : currentEmployeeInfo.admin
+              ? "ADMIN"
+              : "TERRITORY : " +
+                ([tName, tCode].filter(Boolean).join("-") || "-");
           const parts = [
             ["emp-chip-ipi", "🪪", "IPI NO -" + (ipiNum || "-")],
             ["emp-chip-name", "👤", mpo || "-"],
-            ["emp-chip-terr", "📍", "TERRITORY : " + terr],
+            ["emp-chip-terr", "📍", territoryLabel],
           ];
           const key = parts.map((x) => x[2]).join("\u0001");
           const el = $("empMarqueeText");
@@ -6372,6 +6481,9 @@
           updateEmpMarquee(name);
           const brand = $("entryBrand");
           if (brand) brand.hidden = name !== "Employee Information";
+          const employeeRole = $("employeeRoleSelect");
+          if (employeeRole)
+            employeeRole.hidden = name !== "Employee Information";
           const dh = document.querySelector("#entry header.dh");
           if (dh) dh.classList.toggle("dh-center", name === "Employee Information");
           // Chemist Information-এর পাশে কোন প্যানেলে আছে (MPO/AM/ZONE/...) দেখানো হয়
@@ -6459,6 +6571,11 @@
           }
         }
         async function tryEmployeeOkCore() {
+          if (!$("employeeRoleSelect").value) {
+            setSt("err", "আগে dropdown থেকে কর্মীর ধরন নির্বাচন করুন।");
+            $("employeeRoleSelect").focus();
+            return;
+          }
           // নতুন IPI লেখার পর খোঁজা (lookup) শেষ হওয়ার আগেই OK চাপলে নাম/AM
           // তখনও ফাঁকা থাকত, তাই প্রথমবার এরর আসত ও দ্বিতীয়বার চাপতে হতো।
           // এখন চলমান/অপেক্ষমাণ খোঁজা শেষ হওয়া পর্যন্ত অপেক্ষা করে তারপর যাচাই।
@@ -7133,6 +7250,11 @@
           let qtySum = 0,
             invSum = 0;
           const pageInvTotals = []; // প্রতি পাতার নিজস্ব (cumulative নয়) Invoice Value যোগফল
+          const hasRowInvoiceValues = (data.rows || []).some(
+            (row) =>
+              String(row[5] === undefined || row[5] === null ? "" : row[5])
+                .trim() !== "",
+          );
           savedPages.forEach((pg, p) => {
             const pageNo = pg.form.querySelector(".pageno");
             if (pageNo) pageNo.textContent = "Page " + (p + 1) + " of " + n;
@@ -7214,6 +7336,13 @@
               if (r.length && Number.isFinite(q)) qtySum += q;
               if (r.length && Number.isFinite(v)) invSum += v;
             });
+            if (
+              p === n - 1 &&
+              !hasRowInvoiceValues &&
+              Number.isFinite(Number(data.grandTotal))
+            ) {
+              invSum = Number(data.grandTotal);
+            }
             const pageOwnInv = invSum - invBeforePage;
             pageInvTotals.push(pageOwnInv);
             const totRow = pg.tbody.querySelector(".total-row");
@@ -7259,6 +7388,11 @@
           let qtySum = 0,
             invSum = 0;
           const pageInvTotals = [];
+          const hasRowInvoiceValues = (data.rows || []).some(
+            (row) =>
+              String(row[5] === undefined || row[5] === null ? "" : row[5])
+                .trim() !== "",
+          );
           summaryPages.forEach((pg, p) => {
             const pageNo = pg.form.querySelector(".pageno");
             if (pageNo) pageNo.textContent = "Page " + (p + 1) + " of " + n;
@@ -7317,6 +7451,13 @@
               if (r.length && Number.isFinite(q)) qtySum += q;
               if (r.length && Number.isFinite(v)) invSum += v;
             });
+            if (
+              p === n - 1 &&
+              !hasRowInvoiceValues &&
+              Number.isFinite(Number(data.grandTotal))
+            ) {
+              invSum = Number(data.grandTotal);
+            }
             const pageOwnInv = invSum - invBeforePage;
             pageInvTotals.push(pageOwnInv);
             const totRow = pg.tbody.querySelector(".total-row");
@@ -8346,6 +8487,107 @@
             );
           });
         }
+        function normalizeExpiryEntry(data) {
+          if (!data || typeof data !== "object") return data;
+          const normalized = { ...data };
+          Object.defineProperty(normalized, "_sourceData", { value: data });
+          const firstValue = (...values) =>
+            values.find(
+              (value) =>
+                value !== undefined &&
+                value !== null &&
+                String(value).trim() !== "",
+            ) ?? "";
+          const sourceFields =
+            data.fields && typeof data.fields === "object" ? data.fields : {};
+          const fields = { ...sourceFields };
+          const sourceInfo =
+            data.employeeInfo && typeof data.employeeInfo === "object"
+              ? data.employeeInfo
+              : {};
+          fields.ccode = firstValue(fields.ccode, data.chemistCode);
+          fields.chemist = firstValue(fields.chemist, data.chemistName);
+          fields.addr = firstValue(fields.addr, data.address);
+          fields.mpo = firstValue(
+            fields.mpo,
+            sourceInfo.ipi && sourceInfo.mpoName
+              ? sourceInfo.ipi + " - " + sourceInfo.mpoName
+              : sourceInfo.ipi || sourceInfo.mpoName,
+            !data.employeeInfo && data.entryBy && data.entryByName
+              ? data.entryBy + " - " + data.entryByName
+              : !data.employeeInfo
+                ? data.entryBy
+                : "",
+          );
+          fields.am = firstValue(
+            fields.am,
+            sourceInfo.amName,
+            data.amName,
+            data.am,
+          );
+          normalized.fields = fields;
+
+          normalized.employeeInfo = {
+            ...sourceInfo,
+            areaCode: firstValue(sourceInfo.areaCode, data.areaCode),
+            areaName: firstValue(sourceInfo.areaName, data.areaName),
+            territoryCode: firstValue(
+              sourceInfo.territoryCode,
+              data.territoryCode,
+              data.trCode,
+            ),
+            territoryName: firstValue(
+              sourceInfo.territoryName,
+              data.territoryName,
+              data.trName,
+            ),
+            regionCode: firstValue(sourceInfo.regionCode, data.regionCode),
+            regionName: firstValue(sourceInfo.regionName, data.regionName),
+            zoneCode: firstValue(sourceInfo.zoneCode, data.zoneCode),
+            zoneName: firstValue(sourceInfo.zoneName, data.zoneName),
+            depotName: firstValue(sourceInfo.depotName, data.depotName),
+            amIpi: firstValue(sourceInfo.amIpi, data.amIpi),
+            amName: firstValue(sourceInfo.amName, data.amName, data.am),
+          };
+
+          if (Array.isArray(data.rows)) {
+            normalized.rows = rowsFromFirestoreRows(data.rows);
+          } else if (Array.isArray(data.items)) {
+            const itemValue = (item, ...keys) =>
+              firstValue(...keys.map((key) => item && item[key]));
+            normalized.rows = data.items.map((item) => {
+              if (Array.isArray(item)) return item;
+              return [
+                itemValue(item, "name", "productName", "product", "itemName"),
+                itemValue(item, "batchNo", "batch", "batchNumber"),
+                itemValue(item, "mfgDate", "mfg", "manufacturingDate"),
+                itemValue(item, "expDate", "exp", "expiryDate"),
+                itemValue(item, "quantity", "qty", "pcs", "pieces"),
+                itemValue(
+                  item,
+                  "invoiceValue",
+                  "value",
+                  "amount",
+                  "totalValue",
+                  "total",
+                ),
+                itemValue(item, "boxSize", "box"),
+                itemValue(item, "packSize", "pack"),
+                itemValue(item, "perPcs", "perPc", "pricePerPiece"),
+              ];
+            });
+            normalized.codes = data.items.map((item) =>
+              Array.isArray(item)
+                ? ""
+                : firstValue(
+                    item && item.code,
+                    item && item.productCode,
+                    item && item.itemCode,
+                  ),
+            );
+          }
+          return normalized;
+        }
         async function firestoreFetch(url, options = {}) {
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 15000);
@@ -8390,11 +8632,7 @@
           if (r.status === 404) return null;
           if (!r.ok) await firestoreThrowFor(r);
           const j = await r.json();
-          const data = fromFirestoreFields(j.fields || {});
-          if (data && Array.isArray(data.rows)) {
-            data.rows = rowsFromFirestoreRows(data.rows);
-          }
-          return data;
+          return normalizeExpiryEntry(fromFirestoreFields(j.fields || {}));
         }
         // collectionPath যেমন: "Dinajpur/Sep-2026/25" (ওই তারিখের সব ইনভয়েস)
         async function firestoreListDocs(collectionPath) {
@@ -8403,10 +8641,9 @@
           if (!r.ok) await firestoreThrowFor(r);
           const j = await firestoreJson(r);
           return (j.documents || []).map((doc) => {
-            const data = fromFirestoreFields(doc.fields || {});
-            if (data && Array.isArray(data.rows)) {
-              data.rows = rowsFromFirestoreRows(data.rows);
-            }
+            const data = normalizeExpiryEntry(
+              fromFirestoreFields(doc.fields || {}),
+            );
             return { id: doc.name.split("/").pop(), data };
           });
         }
@@ -9093,15 +9330,24 @@
             const reportRows = entries.map(({ date, key, entry }, index) => {
               const fields = entry.fields || {};
               let entryValue = 0;
+              let hasRowValue = false;
               (entry.rows || []).forEach((row) => {
                 const quantity = Number(row[4]);
                 const value = Number(row[5]);
                 if (Number.isFinite(quantity)) quantityTotal += quantity;
-                if (Number.isFinite(value)) {
+                if (
+                  String(row[5] === undefined || row[5] === null ? "" : row[5])
+                    .trim() !== "" &&
+                  Number.isFinite(value)
+                ) {
+                  hasRowValue = true;
                   entryValue += value;
-                  valueTotal += value;
                 }
               });
+              if (!hasRowValue && Number.isFinite(Number(entry.grandTotal))) {
+                entryValue = Number(entry.grandTotal);
+              }
+              valueTotal += entryValue;
               entryValueList[index] = entryValue;
               const rowElement = document.createElement("tr");
               const checkCell = document.createElement("td");
@@ -9771,7 +10017,7 @@
               const l = lvlOf(x.vs);
               try {
                 await firestoreSetDoc(x.r.path, {
-                  ...x.r.entry,
+                  ...(x.r.entry._sourceData || x.r.entry),
                   ["signature" + l]: x.vs.img,
                   ["signed" + l + "At"]: new Date().toISOString(),
                   ["signed" + l + "By"]: x.vs.ipi || "",
@@ -10354,7 +10600,10 @@
         window.addEventListener("resize", placePanels);
 
         let lookupRun = null,
-          lookupTimerActive = false;
+          lookupTimerActive = false,
+          roleLookupPending = false,
+          roleLookupProceedPending = false,
+          activeLookupShouldProceed = false;
         let allCache = null,
           seq = 0,
           timer = null,
@@ -10497,12 +10746,11 @@
         // ---- Admin মোডে ডায়ালগ বদলে যাওয়া: এমপ্লয়ির GROUP/Territory/AM
         // ঘরগুলো লুকিয়ে Admin-এর নাম ও Designation দেখানো হয়। rec থাকলে
         // সেই তথ্য দিয়ে ঘর ভরে দেওয়া হয়, নাহলে আগের এমপ্লয়ি-ডায়ালগে ফেরত ----
-        const setAdminMode = (on, rec) => {
+        const setAdminMode = (on, rec, preservePassword = false) => {
           document
             .querySelectorAll(".employee-extra")
             .forEach((el) => (el.hidden = on));
           $("adminInfoRow").hidden = !on;
-          $("adminPassRow").hidden = !on;
           $("mpoLabel").textContent = on ? "Name (Admin)" : "Name of MPO";
           if (on) {
             const adminName = pick(rec, "USER NAME") || pick(rec, "NAME");
@@ -10513,7 +10761,7 @@
             $("de_adminDesignation").textContent =
               pick(rec, "DESIGNATION") || "-";
           } else {
-            $("de_adminPass").value = "";
+            if (!preservePassword) $("de_adminPass").value = "";
             $("de_adminDesignation").textContent = "-";
           }
         };
@@ -10553,6 +10801,7 @@
             name: pick(record, "NAME"),
           };
         };
+        const areaManagerCache = new Map();
         async function findAmInfo(obj) {
           const team = pick(obj, "TEAM");
           if (team && /^area$/i.test(team)) {
@@ -10563,22 +10812,48 @@
           const areaName = pick(obj, "AREA NAME");
           if (!areaName) return "";
 
-          if (!allCache) {
-            allCache = await getJSON(FB_DB + "/" + FB_PATH + ".json");
-          }
           const targetArea = areaName.trim().toUpperCase();
-          const areaRecord = Object.keys(allCache || {})
-            .map((key) => allCache[key])
-            .filter((record) => record && typeof record === "object")
-            .find((record) => {
-              const recordTeam = pick(record, "TEAM");
-              const recordArea = pick(record, "AREA NAME");
-              return (
-                /^area$/i.test(recordTeam) &&
-                recordArea.trim().toUpperCase() === targetArea
+          if (areaManagerCache.has(targetArea))
+            return areaManagerCache.get(targetArea);
+          let areaRecord = null;
+          try {
+            const q =
+              "?orderBy=" +
+              encodeURIComponent('"TEAM"') +
+              "&equalTo=" +
+              encodeURIComponent('"Area"');
+            const areaManagers = await getJSON(
+              FB_DB + "/" + FB_PATH + ".json" + q,
+            );
+            areaRecord = Object.keys(areaManagers || {})
+              .map((key) => areaManagers[key])
+              .filter((record) => record && typeof record === "object")
+              .find(
+                (record) =>
+                  /^area$/i.test(pick(record, "TEAM")) &&
+                  pick(record, "AREA NAME").trim().toUpperCase() ===
+                    targetArea,
               );
-            });
-          return personInfo(areaRecord);
+          } catch (e) {
+            // Keep the legacy full-list lookup as a fallback if the filtered query fails.
+          }
+          if (!areaRecord) {
+            await loadAll();
+            areaRecord = Object.keys(allCache || {})
+              .map((key) => allCache[key])
+              .filter((record) => record && typeof record === "object")
+              .find((record) => {
+                const recordTeam = pick(record, "TEAM");
+                const recordArea = pick(record, "AREA NAME");
+                return (
+                  /^area$/i.test(recordTeam) &&
+                  recordArea.trim().toUpperCase() === targetArea
+                );
+              });
+          }
+          const info = personInfo(areaRecord);
+          areaManagerCache.set(targetArea, info);
+          return info;
         }
 
         async function getJSON(url) {
@@ -10594,6 +10869,21 @@
             throw e;
           }
           return r.json();
+        }
+        // পুরো কর্মী-তালিকা কেবল legacy lookup বা all-employee suggestions লাগলে
+        // একবারই লোড হয়; সাধারণ IPI lookup এটি ডাউনলোড করে না।
+        let allCachePromise = null;
+        function loadAll() {
+          if (allCache) return Promise.resolve(allCache);
+          if (!allCachePromise) {
+            allCachePromise = getJSON(FB_DB + "/" + FB_PATH + ".json")
+              .then((d) => (allCache = d))
+              .catch((e) => {
+                allCachePromise = null;
+                throw e;
+              });
+          }
+          return allCachePromise;
         }
         async function postJSON(url, body) {
           const r = await fetch(url, {
@@ -11577,7 +11867,36 @@
           }
         }
 
-        async function findRecord(ipi) {
+        function fieldForceRole(rec) {
+          const team = pick(rec, "TEAM");
+          if (DM_ROLE.test(team) || DM_ROLE.test(pick(rec, "DESIGNATION")))
+            return "DEPOT MANAGER";
+          if (/^area$/i.test(team)) return "AM";
+          if (/^zone/i.test(team)) return "ZONE";
+          if (/^region/i.test(team)) return "REGION";
+          return "MPO";
+        }
+        async function findRecord(ipi, selectedRole = "") {
+          if (selectedRole === "DEPOT MANAGER") {
+            const officeStaff = await findOfficeStaff(ipi);
+            return officeStaff &&
+              DM_ROLE.test(pick(officeStaff, "DESIGNATION"))
+              ? officeStaff
+              : null;
+          }
+          const fieldForceOnly = [
+            "MPO",
+            "AM",
+            "ZONE",
+            "REGION",
+            "ADMIN_FIELD_FORCE",
+          ].includes(selectedRole);
+          const roleMatches = (rec) => {
+            if (!selectedRole) return true;
+            if (selectedRole === "ADMIN_FIELD_FORCE")
+              return fieldForceRole(rec) !== "DEPOT MANAGER";
+            return fieldForceRole(rec) === selectedRole;
+          };
           const base = FB_DB + "/" + FB_PATH + ".json";
           const q =
             "?orderBy=" +
@@ -11596,12 +11915,16 @@
             Object.keys(obj || {})
               .map((k) => obj[k])
               .filter((o) => o && typeof o === "object")
-              .find((o) => pick(o, "IPI NO").toUpperCase() === ipi);
+              .find(
+                (o) =>
+                  pick(o, "IPI NO").toUpperCase() === ipi && roleMatches(o),
+              );
           let rec = match(data);
           if (!rec) {
-            if (!allCache) allCache = await getJSON(base);
+            await loadAll();
             rec = match(allCache);
           }
+          if (fieldForceOnly) return rec || null;
           // Field_Force-এ না পেলে অফিস স্টাফ (DINAJPUR/Office_Staff) দেখা হয় —
           // Depot Manager এখানে থাকে: key "IPI-006552_নাম", ফিল্ড Designation /
           // IPINo / NameOfEmployee। অন্য রেকর্ডের মতো পড়তে স্ট্যান্ডার্ড
@@ -11643,14 +11966,9 @@
           }
         }
 
-        // ---- Admin রেকর্ড খোঁজা: PRODUCT_DB-এর "DINAJPUR/Emp_Password"
-        // নোডে ঠিক এই IPI (norm() করা, যেমন "IPI-004686") দিয়ে শুরু হওয়া
-        // কোনো key থাকলে সেটাই Admin রেকর্ড (key ফরম্যাট:
-        // "IPI-004686_নাম", ভেতরে DESIGNATION/PASSWORD/USER ID/USER NAME
-        // ফিল্ড থাকে)। এই DB/নোড না পাওয়া গেলে বা এরর হলে চুপচাপ non-admin
-        // হিসেবে ধরা হয় — সাধারণ ইউজারের ফ্লোতে কোনো প্রভাব পড়ে না।
+        // Admin ও সাধারণ কর্মীর credential একই নোডে থাকে, তাই এক request-এই দুটো বের হয়।
         const ADMIN_PATH = "DINAJPUR/Emp_Password";
-        async function findAdminRecord(ipi) {
+        async function findCredentialRecords(ipi) {
           const base = PRODUCT_DB + "/" + ADMIN_PATH + ".json";
           const q =
             "?orderBy=" +
@@ -11661,12 +11979,12 @@
             encodeURIComponent('"' + ipi + '\uf8ff"');
           try {
             const data = await getJSON(base + q);
-            // key হুবহু IPI হতে হবে (অথবা "IPI_নাম" ফরম্যাট), শুধু prefix
-            // মিললেই হবে না। আর DESIGNATION "MPO" হলে সেটা সাধারণ কর্মী,
-            // Admin নয় — Emp_Password নোডে MPO-দেরও রেকর্ড থাকে।
-            const keys = Object.keys(data || {}).filter((k) => {
-              if (k !== ipi && !k.startsWith(ipi + "_")) return false;
-              const rec = data[k];
+            const keys = Object.keys(data || {}).filter(
+              (key) => key === ipi || key.startsWith(ipi + "_"),
+            );
+            const passwordRecord = keys.length ? data[keys[0]] : null;
+            const adminKey = keys.find((key) => {
+              const rec = data[key];
               const des = String(
                 (rec && (rec.DESIGNATION || rec.Designation)) || "",
               )
@@ -11674,38 +11992,17 @@
                 .toUpperCase();
               return des !== "MPO";
             });
-            return keys.length ? data[keys[0]] : null;
+            return {
+              adminRecord: adminKey ? data[adminKey] : null,
+              passwordRecord,
+            };
           } catch (e) {
-            return null;
-          }
-        }
-
-        // ---- সাধারণ কর্মীর পাসওয়ার্ড রেকর্ড: একই Emp_Password নোড, তবে
-        // DESIGNATION যা-ই হোক (MPO সহ) রেকর্ডটা ফেরত দেয়। নোডে না থাকলে বা
-        // এরর হলে null — তখন পাসওয়ার্ড চাওয়া হয় না ----
-        async function findPasswordRecord(ipi) {
-          const base = PRODUCT_DB + "/" + ADMIN_PATH + ".json";
-          const q =
-            "?orderBy=" +
-            encodeURIComponent('"$key"') +
-            "&startAt=" +
-            encodeURIComponent('"' + ipi + '"') +
-            "&endAt=" +
-            encodeURIComponent('"' + ipi + '\uf8ff"');
-          try {
-            const data = await getJSON(base + q);
-            const key = Object.keys(data || {}).find(
-              (k) => k === ipi || k.startsWith(ipi + "_"),
-            );
-            return key ? data[key] : null;
-          } catch (e) {
-            return null;
+            return { adminRecord: null, passwordRecord: null };
           }
         }
         // পাসওয়ার্ড ঘর দেখানো/লুকানো (Admin মোড ছাড়া সাধারণ কর্মীর জন্য)
         function setPassRow(on) {
-          $("adminPassRow").hidden = !on;
-          $("adminPassLabel").textContent = on ? "Password" : "Admin Password";
+          $("adminPassLabel").textContent = "Password";
           if (!on) $("de_adminPass").value = "";
         }
 
@@ -11728,6 +12025,7 @@
         }
         async function lookupCore() {
           const raw = $("de_ipi").value.trim();
+          const selectedRole = $("employeeRoleSelect").value;
           const mine = ++seq;
           currentEmployeeInfo = {};
           currentTerritoryCode = "";
@@ -11745,29 +12043,51 @@
           const ipi = norm(raw);
           lastLookedIpi = ipi;
           setSt("load", "খোঁজা হচ্ছে…");
-          // ---- Admin চেক: রেগুলার এমপ্লয়ি লুকআপের পাশাপাশি, IPI নাম্বারটা
-          // Emp_Password নোডে আছে কি না দেখা হয়। থাকলে ডায়ালগ Admin মোডে
-          // বদলে গিয়ে নাম/Designation ও পাসওয়ার্ড ঘর দেখানো হয়, OK চাপার
-          // সময় পাসওয়ার্ড যাচাই হবে (tryEmployeeOk-এ)।
-          const adminPromise = findAdminRecord(ipi)
-            .then((rec) => {
-              if ($("de_ipi").value.trim() && norm($("de_ipi").value) !== ipi)
-                return null; // ততক্ষণে IPI বদলে গেলে পুরনো ফলাফল উপেক্ষা
-              pendingAdminRecord = rec;
-              setAdminMode(!!rec, rec);
-              return rec;
-            })
-            .catch(() => {
-              pendingAdminRecord = null;
-              setAdminMode(false);
-              return null;
-            });
-          const passPromise = findPasswordRecord(ipi);
           try {
-            const rec = await findRecord(ipi);
-            const adminRec = await adminPromise;
-            const passRec = await passPromise;
+            const credentialsPromise = findCredentialRecords(ipi);
+            let employeePromise =
+              selectedRole === "ADMIN_FIELD_FORCE"
+                ? null
+                : findRecord(ipi, selectedRole).then(
+                    (rec) => ({ rec }),
+                    (error) => ({ error }),
+                  );
+            const {
+              adminRecord: credentialAdminRecord,
+              passwordRecord: passRec,
+            } = await credentialsPromise;
             if (mine !== seq) return;
+            const adminRec =
+              selectedRole === "ADMIN_FIELD_FORCE"
+                ? credentialAdminRecord
+                : null;
+            pendingAdminRecord = adminRec;
+            setAdminMode(!!adminRec, adminRec, true);
+            if (adminRec && selectedRole === "ADMIN_FIELD_FORCE") {
+              const adminName =
+                pick(adminRec, "USER NAME") || pick(adminRec, "NAME");
+              $("de_ipi").value = ipi;
+              if (adminName) {
+                $("de_mpo").value = adminName;
+                autoName = adminName;
+              }
+              currentEmployeeInfo = { ipi, admin: true };
+              setSt("ok", "");
+              return;
+            }
+            if (!employeePromise) {
+              employeePromise = findRecord(ipi, selectedRole).then(
+                (rec) => ({ rec }),
+                (error) => ({ error }),
+              );
+            }
+            const employeeResult = await employeePromise;
+            if (employeeResult.error) throw employeeResult.error;
+            const rec = employeeResult.rec;
+            const amInfoPromise =
+              rec && !rec._officeStaff
+                ? findAmInfo(rec)
+                : Promise.resolve(null);
             // Admin নয়, কিন্তু Emp_Password নোডে রেকর্ড আছে (যেমন MPO) —
             // পাসওয়ার্ড ঘর দেখানো হয়, OK চাপলে যাচাই হবে
             if (!adminRec && passRec) {
@@ -11775,23 +12095,20 @@
               setPassRow(true);
             }
             if (!rec) {
-              if (adminRec) {
-                // অ্যাডমিন-শুধু IPI (রেগুলার এমপ্লয়ি তালিকায় নেই) —
-                // এটা এরর নয়, Admin মোডেই এগোনো যাবে
-                setSt("ok", "");
-              } else {
-                dropAuto();
-                setSt(
-                  "err",
-                  ipi + " নম্বরে কোনো কর্মী পাওয়া যায়নি। নাম নিজে লিখুন।",
-                );
-              }
+              dropAuto();
+              setSt(
+                "err",
+                selectedRole
+                  ? ipi +
+                      " নম্বরে " +
+                      selectedRole.replace("_FIELD_FORCE", "") +
+                      " রোলের কর্মী পাওয়া যায়নি।"
+                  : ipi +
+                      " নম্বরে কোনো কর্মী পাওয়া যায়নি। নাম নিজে লিখুন।",
+              );
               return;
             }
             if (adminRec) {
-              // এই IPI এমপ্লয়ি তালিকা ও Admin তালিকা দুটোতেই আছে —
-              // Admin মোডই বহাল থাকবে, তাই এমপ্লয়ি রেকর্ডের বাকি তথ্য
-              // (territory/AM ইত্যাদি) দিয়ে আর কাজ নেই
               currentEmployeeInfo = { ipi: pick(rec, "IPI NO") || ipi };
               setSt("ok", "");
               return;
@@ -11802,7 +12119,7 @@
               $("de_mpo").value = name;
               autoName = name;
             }
-            const amInfo = await findAmInfo(rec);
+            const amInfo = await amInfoPromise;
             if (mine !== seq) return;
             if (rec._officeStaff) {
               // অফিস স্টাফ (Depot Manager): টেরিটরি/এরিয়া/ডিপো-নাম নেই
@@ -12153,9 +12470,7 @@
           }
           const request = ++adminEmpSuggestSeq;
           try {
-            if (!allCache) {
-              allCache = await getJSON(FB_DB + "/" + FB_PATH + ".json");
-            }
+            await loadAll();
             if (
               request !== adminEmpSuggestSeq ||
               query !== $("de_adminChemistIpi").value.trim()
@@ -12259,6 +12574,7 @@
         $("de_ipi").addEventListener("input", () => {
           clearTimeout(timer);
           lookupTimerActive = false;
+          roleLookupPending = false;
           seq += 1;
           currentEmployeeInfo = {};
           currentTerritoryCode = "";
@@ -12273,15 +12589,78 @@
           st.textContent = "";
           refreshOk();
         });
-        // সার্চ আইকনে ক্লিক করলে ৬০০ms অপেক্ষা না করে সঙ্গে সঙ্গে খোঁজে
-        $("ipiSearchBtn").addEventListener("click", () => {
+        $("employeeRoleSelect").addEventListener("change", () => {
+          clearTimeout(timer);
+          lookupTimerActive = false;
+          seq += 1;
+          currentEmployeeInfo = {};
+          currentTerritoryCode = "";
+          updateTerritoryFields();
+          pendingAdminRecord = null;
+          pendingPassRecord = null;
+          lastLookedIpi = "";
+          setAdminMode(false);
+          setPassRow(false);
+          dropAuto();
+          st.className = "ipiStatus";
+          st.textContent = "";
+          const ipiSearchButton = $("ipiSearchBtn");
+          if ($("de_ipi").value.trim().length >= 3) {
+            if (ipiSearchButton.disabled) {
+              roleLookupPending = true;
+              roleLookupProceedPending = activeLookupShouldProceed;
+            } else {
+              runIpiSearch(false);
+            }
+          }
+        });
+        function runIpiSearch(proceedToForm) {
+          if (!$("employeeRoleSelect").value) {
+            setSt("err", "আগে dropdown থেকে কর্মীর ধরন নির্বাচন করুন।");
+            $("employeeRoleSelect").focus();
+            return;
+          }
           if (!$("de_ipi").value.trim()) {
             $("de_ipi").focus();
             return;
           }
           clearTimeout(timer);
           lookupTimerActive = false;
+          const btn = $("ipiSearchBtn");
+          let busy = $("searchBusy");
+          if (!busy) {
+            busy = document.createElement("div");
+            busy.id = "searchBusy";
+            busy.className = "search-busy";
+            busy.setAttribute("role", "status");
+            busy.setAttribute("aria-label", "খোঁজা হচ্ছে");
+            busy.innerHTML = '<div class="search-busy-spin"></div>';
+            dlg.appendChild(busy);
+          }
+          busy.hidden = false;
+          btn.classList.add("loading");
+          btn.disabled = true;
+          activeLookupShouldProceed = proceedToForm;
           lookupRun = lookup();
+          Promise.resolve(lookupRun)
+            .catch(() => {})
+            .finally(() => {
+              busy.hidden = true;
+              btn.classList.remove("loading");
+              btn.disabled = false;
+              if (roleLookupPending) {
+                roleLookupPending = false;
+                const shouldProceed = roleLookupProceedPending;
+                roleLookupProceedPending = false;
+                runIpiSearch(shouldProceed);
+                return;
+              }
+              if (proceedToForm) tryEmployeeOk();
+            });
+        }
+        // সার্চ আইকনে ক্লিক করলে সঙ্গে সঙ্গে খোঁজে, তারপর পাসওয়ার্ড যাচাই করে এগোয়।
+        $("ipiSearchBtn").addEventListener("click", () => {
+          runIpiSearch(true);
         });
 
         dlg.addEventListener("keydown", (e) => {
@@ -12512,7 +12891,7 @@
               for (const ref of postRefs) {
                 try {
                   await firestoreSetDoc(ref.path, {
-                    ...ref.entry,
+                    ...(ref.entry._sourceData || ref.entry),
                     posted: true,
                     postedAt: new Date().toISOString(),
                   });
@@ -12556,6 +12935,7 @@
           const hasLegacyAmFormat =
             !savedEmp.employeeInfo?.amIpi && savedAmSeparator !== -1;
           $("de_ipi").value = savedEmp.ipi;
+          $("employeeRoleSelect").value = savedEmp.lookupRole || "";
           $("de_mpo").value = savedEmp.mpo || "";
           $("de_wp_mpo").value = savedEmp.wp_mpo || savedEmp.wp1 || "";
           $("de_wp_am").value = savedEmp.wp_am || savedEmp.wp2 || "";
