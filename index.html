@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -1719,6 +1718,9 @@
         line-height: 1;
         color: #a33;
       }
+      #entry.store-invoice-edit .pl .rm {
+        display: block !important;
+      }
       #entry .pl .rm:hover {
         background: #fdeeee;
       }
@@ -3306,6 +3308,11 @@
         table-layout: fixed;
         font-size: 12px;
       }
+      #reportDlg thead {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+      }
       #reportDlg th,
       #reportDlg td {
         padding: 6px 5px;
@@ -3383,6 +3390,9 @@
         color: #1b7a3d;
         font-weight: 700;
       }
+      #reportDlg tr.rd-dm-eligible > td {
+        background: #e8f5e9;
+      }
       #reportDlg .rd-ver-no {
         color: #b00020;
       }
@@ -3409,6 +3419,9 @@
         border-top: 2px solid #333;
         background: #f3f5f8;
         font-weight: 700;
+      }
+      #reportDlg .grand-row #rdGrandValue {
+        text-align: right;
       }
       #reportDlg footer {
         display: flex;
@@ -3507,6 +3520,15 @@
         background: #fff;
         color: #111;
         text-align: left;
+        cursor: pointer;
+      }
+      #reportDlg .rd-invoice-edit-btn {
+        padding: 2px 0;
+        border: 0;
+        background: transparent;
+        color: #174ea6;
+        font: inherit;
+        text-decoration: underline;
         cursor: pointer;
       }
       .chemist-suggestion:last-child {
@@ -4465,8 +4487,9 @@
               <option value="AM">AM</option>
               <option value="ZONE">ZONE</option>
               <option value="REGION">REGION</option>
-              <option value="DEPOT MANAGER">DEPOT MANAGER</option>
+              <option value="STORE">STORE</option>
               <option value="ADMIN_FIELD_FORCE">ADMIN</option>
+              <option value="DEPOT MANAGER">DEPOT MANAGER</option>
             </select>
             <span id="entrySectionName" class="section-name"
               >Employee Information</span
@@ -4823,6 +4846,12 @@
         </div>
         <footer class="df">
           <span class="sp"></span>
+          <button type="button" id="saveInvoiceEdit" hidden>
+            Save Invoice Changes
+          </button>
+          <button type="button" id="cancelInvoiceEdit" hidden>
+            Cancel Edit
+          </button>
           <button
             type="button"
             class="post-search-hidden product-list-group"
@@ -4831,6 +4860,13 @@
             View
           </button>
         </footer>
+        <div
+          class="ipiStatus wide"
+          id="invoiceEditStatus"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
         <div id="empMarquee" class="emp-marquee" hidden aria-live="polite">
           <span id="empMarqueeText" class="emp-marquee-text"></span>
         </div>
@@ -5696,6 +5732,9 @@
           </div>
           <button type="button" id="rdClose">Close</button>
           <div class="rd-actions" id="rdActions" hidden>
+            <button type="button" id="rdSendAllDm" hidden>
+              সব যোগ্য Invoice DM-এ পাঠান
+            </button>
             <button type="button" id="rdPrintAll">All Print</button>
           </div>
         </footer>
@@ -6454,7 +6493,7 @@
           ).trim();
           const depotManager = currentEmployeeInfo.officeStaff;
           const territoryLabel = depotManager
-            ? "DEPOT MANAGER"
+            ? currentEmployeeInfo.officeStaffRole || "DEPOT MANAGER"
             : currentEmployeeInfo.admin
               ? "ADMIN"
               : "TERRITORY : " +
@@ -6534,7 +6573,7 @@
           setEntrySection("Chemist Information");
           // MPO সিগনেচার: Chemist Information-এ এলে, আজকের তারিখের সিগনেচার
           // না থাকলে (নতুন দিন/নতুন IPI) সিগনেচার প্যাড খুলবে। Admin-এর লাগে না।
-          if (!isAdmin) {
+          if (!isAdmin && !isStoreStaff()) {
             setTimeout(() => {
               if (dlg.open && !$("sigDlg").open && !getTodaySignature())
                 openSignature(null);
@@ -6606,11 +6645,63 @@
             if (!lookupTimerActive && lookupInFlight === 0 && run === lookupRun)
               break;
           }
+          if ($("employeeRoleSelect").value === "STORE") {
+            const ipi = norm($("de_ipi").value);
+            const storedPass = String(
+              pick(pendingPassRecord, "PASSWORD") || "",
+            ).trim();
+            const enteredPass = $("de_adminPass").value.trim();
+            if (!STORE_IPIS.has(ipi)) {
+              setSt("err", "এই IPI নম্বরটি STORE যাচাইয়ের জন্য অনুমোদিত নয়।");
+              return;
+            }
+            if (!storedPass) {
+              setSt(
+                "err",
+                "STORE যাচাইয়ের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
+              );
+              return;
+            }
+            if (!enteredPass) {
+              setSt("err", "পাসওয়ার্ড দিন।");
+              $("de_adminPass").focus();
+              return;
+            }
+            if (enteredPass !== storedPass) {
+              setSt("err", "পাসওয়ার্ড সঠিক নয়।");
+              $("de_adminPass").value = "";
+              $("de_adminPass").focus();
+              return;
+            }
+            storeVerificationPassed = true;
+            currentEmployeeInfo = {
+              ipi,
+              mpoName: "STORE",
+              designation: "STORE",
+              team: "",
+              officeStaff: true,
+              officeStaffRole: "STORE",
+            };
+            currentTerritoryCode = "";
+            $("de_ipi").value = ipi;
+            $("de_mpo").value = "STORE";
+            isAdmin = false;
+            updateTerritoryFields();
+            syncChemistCodeLock();
+            showChemistSection();
+            dlg.close();
+            openReportDialogSafe();
+            return;
+          }
           const ipi = $("de_ipi").value.trim();
           const mpo = $("de_mpo").value.trim();
           const am = $("de_am").value.trim();
           // Admin মোডে AM ঘর দেখানোই হয় না, তাই সেটা বাধ্যতামূলক নয়
-          const needAm = !pendingAdminRecord && !isRsm() && !isDepotManager();
+          const needAm =
+            !pendingAdminRecord &&
+            !currentEmployeeInfo.officeStaff &&
+            !isRsm() &&
+            !isDepotManager();
           if (!ipi || !mpo || (needAm && !am)) {
             await showMessage(
               pendingAdminRecord
@@ -6682,6 +6773,7 @@
         // দাগের ওপরে বসে।
         const SIG_KEY = "formE_mpoSignature";
         const DM_ROLE = /depot/i; // Depot Manager চেনার নিয়ম (TEAM/DESIGNATION-এ "Depot")
+        const STORE_IPIS = new Set(["IPI-004686", "IPI-000261"]);
         let sigMem = null;
         function todayStr() {
           const d = new Date();
@@ -7293,23 +7385,9 @@
             const rsmBox = pg.form.querySelector(".sign.rsm > div:first-child");
             applySig(rsmBox, data.signatureRsm, data.signatureDate);
             // Replacement given date and Signature of Depot Manager — RSM
-            // ফুটারের শেষ ঘর; DM সই করলে সইয়ের সাথে সই করার তারিখও বসে
+            // ফুটারের শেষ ঘর; এখানে শুধু DM-এর স্বাক্ষর দেখানো হয়।
             const dmBox = pg.form.querySelector(".sign.rsm > div.depot");
             applySig(dmBox, data.signatureDm, data.signatureDate);
-            if (dmBox && data.signatureDm && data.signedDmAt) {
-              const dd = new Date(data.signedDmAt);
-              if (!isNaN(dd)) {
-                const dt = document.createElement("span");
-                dt.className = "sig-date";
-                dt.textContent =
-                  String(dd.getDate()).padStart(2, "0") +
-                  "/" +
-                  String(dd.getMonth() + 1).padStart(2, "0") +
-                  "/" +
-                  dd.getFullYear();
-                dmBox.appendChild(dt);
-              }
-            }
             const b = pg.form.querySelector(".inv-no-badge");
             if (b) {
               b.textContent = "";
@@ -7899,6 +7977,7 @@
         let pending = null;
         let editingRow = null;
         let editingSnapshot = null;
+        let editingInvoice = null;
 
         const mpoText = (ipi, name) =>
           ipi && name ? ipi + " - " + name : ipi || name || "";
@@ -8837,10 +8916,12 @@
           $("rdStatus").className = "rd-status";
           $("rdSummary").hidden = true;
           $("rdActions").hidden = true;
+          $("rdSendAllDm").hidden = !isStoreStaff();
           $("rdRows").replaceChildren();
           $("rdGrandValue").textContent = "0";
           $("rdCheckAll").checked = false;
           $("rdCheckAll").indeterminate = false;
+          $("rdCheckAll").disabled = true;
           lastReportEntries = [];
           reportMode = "raw";
           // Generate/All Print সবার জন্য উন্মুক্ত, কিন্তু Summary (ও তার
@@ -8857,6 +8938,7 @@
           $("rdNewEntry").hidden = !isAreaManager();
           $("rdRefresh").hidden = !(isSupervisor() || isAdmin);
           $("rdClose").hidden = home;
+          $("rdClose").textContent = "Close";
           if (home && dlg.open) dlg.close();
           if (!reportDlg.open) reportDlg.showModal();
         }
@@ -8930,7 +9012,9 @@
           })();
         }
         $("rdNewEntry").onclick = startAmEntry;
-        $("rdClose").onclick = () => reportDlg.close();
+        $("rdClose").onclick = () => {
+          reportDlg.close();
+        };
 
         function parseDateInput(value) {
           const [year, month, day] = value.split("-").map(Number);
@@ -8956,24 +9040,296 @@
             document.querySelectorAll("#rdRows .rd-row-check"),
           );
           const checkAll = $("rdCheckAll");
-          if (!boxes.length) {
+          const selectableBoxes = boxes.filter((box) => !box.disabled);
+          checkAll.disabled = selectableBoxes.length === 0;
+          if (!selectableBoxes.length) {
             checkAll.checked = false;
             checkAll.indeterminate = false;
             return;
           }
-          const checkedCount = boxes.filter((b) => b.checked).length;
-          checkAll.checked = checkedCount === boxes.length;
+          const checkedCount = selectableBoxes.filter((b) => b.checked).length;
+          checkAll.checked = checkedCount === selectableBoxes.length;
           checkAll.indeterminate =
-            checkedCount > 0 && checkedCount < boxes.length;
+            checkedCount > 0 && checkedCount < selectableBoxes.length;
         }
         $("rdCheckAll").onchange = () => {
           const checked = $("rdCheckAll").checked;
           document.querySelectorAll("#rdRows .rd-row-check").forEach((box) => {
-            box.checked = checked;
+            if (!box.disabled) box.checked = checked;
           });
         };
         let reportCache = null;
         let reportCacheRange = "";
+        function isStoreDmEligible(entry) {
+          return !!(
+            entry.signatureAm &&
+            entry.signatureRsm &&
+            !entry.storeVerified &&
+            !entry.signatureDm &&
+            !entry.posted
+          );
+        }
+        async function markInvoiceForDepotManager(date, key) {
+          if (!storeVerificationPassed || !isStoreStaff())
+            throw new Error("STORE যাচাই ছাড়া Invoice পাঠানো যাবে না।");
+          const path = expiryPath(date) + "/" + key;
+          const data = await firestoreGetDoc(path);
+          if (!data) throw new Error("এই Invoice আর পাওয়া যাচ্ছে না।");
+          if (!data.signatureAm || !data.signatureRsm)
+            throw new Error(
+              "AM ও RSM—দুজনের স্বাক্ষর না হওয়া পর্যন্ত Invoice DM-এ পাঠানো যাবে না।",
+            );
+          if (data.storeVerified) return false;
+          await firestoreSetDoc(path, {
+            ...(data._sourceData || data),
+            storeVerified: true,
+            storeVerifiedAt: new Date().toISOString(),
+            storeVerifiedBy: selfIpi(),
+          });
+          return true;
+        }
+        async function sendInvoiceToDepotManager(date, key, button) {
+          if (!storeVerificationPassed || !isStoreStaff()) {
+            showMessage("STORE যাচাই ছাড়া Invoice পাঠানো যাবে না।", "error");
+            return;
+          }
+          button.disabled = true;
+          $("rdStatus").className = "rd-status";
+          $("rdStatus").textContent = "Invoice DM-এর কাছে পাঠানো হচ্ছে…";
+          try {
+            const sent = await markInvoiceForDepotManager(date, key);
+            await generateReport(false);
+            $("rdStatus").textContent = sent
+              ? "Invoice DM-এর স্বাক্ষরের জন্য পাঠানো হয়েছে।"
+              : "Invoice আগেই DM-এর স্বাক্ষরের জন্য পাঠানো হয়েছে।";
+          } catch (error) {
+            $("rdStatus").className = "rd-status err";
+            $("rdStatus").textContent =
+              error.message ||
+              (error.status
+                ? "Invoice পাঠানো যায়নি — সার্ভার এরর (" +
+                  error.status +
+                  ")।"
+                : "Invoice পাঠানো যায়নি (ইন্টারনেট/সার্ভার সমস্যা)।");
+          } finally {
+            button.disabled = false;
+          }
+        }
+        async function sendAllInvoicesToDepotManager() {
+          if (!storeVerificationPassed || !isStoreStaff()) {
+            showMessage("STORE যাচাই ছাড়া Invoice পাঠানো যাবে না।", "error");
+            return;
+          }
+          const eligible = lastReportEntries.filter(
+            ({ entry }) => isStoreDmEligible(entry),
+          );
+          if (!eligible.length) {
+            $("rdStatus").className = "rd-status";
+            $("rdStatus").textContent =
+              "DM-এ পাঠানোর মতো নতুন RSM-স্বাক্ষরিত Invoice নেই।";
+            return;
+          }
+          const button = $("rdSendAllDm");
+          button.disabled = true;
+          $("rdStatus").className = "rd-status";
+          $("rdStatus").textContent =
+            eligible.length + "টি Invoice DM-এর কাছে পাঠানো হচ্ছে…";
+          let sentCount = 0;
+          const failed = [];
+          for (const item of eligible) {
+            try {
+              if (await markInvoiceForDepotManager(item.date, item.key))
+                sentCount += 1;
+            } catch (error) {
+              failed.push(item.key + ": " + (error.message || "server error"));
+            }
+          }
+          await generateReport(false);
+          if (failed.length) {
+            $("rdStatus").className = "rd-status err";
+            $("rdStatus").textContent =
+              sentCount +
+              "টি পাঠানো হয়েছে, " +
+              failed.length +
+              "টি পাঠানো যায়নি: " +
+              failed.join("; ");
+          } else {
+            $("rdStatus").textContent =
+              sentCount +
+              "টি Invoice DM-এর স্বাক্ষরের জন্য পাঠানো হয়েছে।";
+          }
+        }
+        $("rdSendAllDm").onclick = sendAllInvoicesToDepotManager;
+        function canEditInvoice() {
+          return isAdmin || (storeVerificationPassed && isStoreStaff());
+        }
+        async function openStoreInvoiceEdit(date, key) {
+          if (!canEditInvoice()) {
+            showMessage("Invoice edit করার অনুমতি নেই।", "error");
+            return;
+          }
+          const status = $("rdStatus");
+          status.className = "rd-status";
+          status.textContent = "Invoice তথ্য আনা হচ্ছে…";
+          try {
+            const path = expiryPath(date) + "/" + key;
+            const data = await firestoreGetDoc(path);
+            if (!data) {
+              status.className = "rd-status err";
+              status.textContent = "এই Invoice আর পাওয়া যাচ্ছে না।";
+              return;
+            }
+            editingInvoice = { path, data };
+            reportDlg.close();
+            $("de_ccode").value = data.fields?.ccode || "";
+            $("de_chemist").value = data.fields?.chemist || "";
+            $("de_addr").value = data.fields?.addr || "";
+            ["de_ccode", "de_chemist", "de_addr"].forEach((id) => {
+              $(id).readOnly = true;
+            });
+            $("invoiceEditStatus").hidden = false;
+            $("invoiceEditStatus").textContent =
+              "পণ্য পরিবর্তন করলে আগের verification ও Post status বাতিল হবে।";
+            $("saveInvoiceEdit").hidden = false;
+            $("cancelInvoiceEdit").hidden = false;
+            $("viewAdded").hidden = true;
+            $("deRows").replaceChildren();
+            $("deRows").classList.add("view-all");
+            (data.rows || []).forEach((values, index) => {
+              const row = addRow(values);
+              row.classList.add("row-committed");
+              row.dataset.code = (data.codes || [])[index] || "";
+              row.dataset.pname = values[0] || "";
+              row.dataset.packSize = values[7] || "";
+              row.dataset.perPcs = values[8] || "";
+              const ppc = row.querySelector(".ppc");
+              if (ppc) ppc.textContent = values[8] || "";
+            });
+            updateTotals();
+            updateChemistSummary();
+            showChemistSection();
+            $("entryFieldsBlock").classList.add("post-search-hidden");
+            $("chemistFieldsBlock").classList.add("pre-ok-hidden");
+            document
+              .querySelectorAll(".product-list-group")
+              .forEach((el) => el.classList.remove("post-search-hidden"));
+            $("entryBlank").hidden = true;
+            $("entryReport").hidden = true;
+            dlg.classList.add("wide-mode");
+            dlg.classList.add("store-invoice-edit");
+            setEntrySection("Invoice Edit");
+            document.body.classList.add("de-open");
+            if (!dlg.open) dlg.showModal();
+            getProductSuggestions().catch((error) => {
+              $("invoiceEditStatus").textContent =
+                "Product list লোড হয়নি; বিদ্যমান পণ্য edit/remove করা যাবে, নতুন পণ্যের suggestion নাও আসতে পারে।";
+              console.error("Store edit product lookup failed:", error);
+            });
+          } catch (error) {
+            status.className = "rd-status err";
+            status.textContent =
+              error.code === "perm"
+                ? "Invoice edit করার অনুমতি নেই (Firebase Rules)।"
+                : error.status
+                  ? "Invoice আনা যায়নি — সার্ভার এরর (" +
+                    error.status +
+                    ")।"
+                  : "Invoice আনা যায়নি (ইন্টারনেট/সার্ভার সমস্যা)।";
+          }
+        }
+        function restoreInvoiceEditControls() {
+          editingInvoice = null;
+          ["de_ccode", "de_chemist", "de_addr"].forEach((id) => {
+            $(id).readOnly = false;
+          });
+          $("saveInvoiceEdit").hidden = true;
+          $("cancelInvoiceEdit").hidden = true;
+          $("viewAdded").hidden = false;
+          $("invoiceEditStatus").hidden = true;
+          $("invoiceEditStatus").textContent = "";
+          $("deRows").replaceChildren();
+          $("deRows").classList.remove("view-all");
+          dlg.classList.remove("wide-mode");
+          dlg.classList.remove("store-invoice-edit");
+        }
+        async function returnStoreToReport(message) {
+          restoreInvoiceEditControls();
+          if (dlg.open) dlg.close();
+          reportCache = null;
+          requestAnimationFrame(async () => {
+            openReportDialog();
+            await generateReport(false);
+            if (message) $("rdStatus").textContent = message;
+          });
+        }
+        async function saveStoreInvoiceEdit() {
+          if (!editingInvoice || !canEditInvoice())
+            return;
+          if (!validateRowsBeforeView()) return;
+          const entry = collectEntry();
+          if (!entry.rows.length) {
+            $("invoiceEditStatus").textContent =
+              "Invoice-এ অন্তত একটি পণ্য রাখতে হবে।";
+            return;
+          }
+          const total = entry.rows.reduce(
+            (sum, row) => sum + (Number(row[5]) || 0),
+            0,
+          );
+          const updated = {
+            ...editingInvoice.data,
+            rows: entry.rows,
+            codes: entry.codes,
+            grandTotal: Math.round(total),
+            signatureMpo: "",
+            signatureAm: "",
+            signatureRsm: "",
+            signatureDm: "",
+            signatureDate: "",
+            storeVerified: false,
+            posted: false,
+          };
+          [
+            "signedAmAt",
+            "signedAmBy",
+            "signedRsmAt",
+            "signedRsmBy",
+            "signedDmAt",
+            "signedDmBy",
+            "postedAt",
+            "storeVerifiedAt",
+            "storeVerifiedBy",
+          ].forEach((field) => delete updated[field]);
+          const button = $("saveInvoiceEdit");
+          button.disabled = true;
+          button.textContent = "Saving…";
+          $("invoiceEditStatus").textContent = "Invoice update হচ্ছে…";
+          try {
+            await firestoreSetDoc(editingInvoice.path, updated);
+            await returnStoreToReport(
+              "Invoice update হয়েছে। পরিবর্তনের কারণে আগের verification ও Post status reset হয়েছে।",
+            );
+          } catch (error) {
+            $("invoiceEditStatus").textContent =
+              error.code === "perm"
+                ? "Invoice update করার অনুমতি নেই (Firebase Rules)।"
+                : error.status
+                  ? "Invoice update হয়নি — সার্ভার এরর (" +
+                    error.status +
+                    ")।"
+                  : "Invoice update হয়নি (ইন্টারনেট/সার্ভার সমস্যা)।";
+          } finally {
+            button.disabled = false;
+            button.textContent = "Save Invoice Changes";
+          }
+        }
+        $("saveInvoiceEdit").onclick = saveStoreInvoiceEdit;
+        $("cancelInvoiceEdit").onclick = () => returnStoreToReport();
+        dlg.addEventListener("cancel", (event) => {
+          if (!editingInvoice) return;
+          event.preventDefault();
+          returnStoreToReport();
+        });
         function setSelectOptions(sel, firstLabel, items, cur) {
           sel.replaceChildren();
           const first = document.createElement("option");
@@ -9072,7 +9428,8 @@
             // (যেটা দিয়ে অ্যাপ ওপেন/লগইন করা হয়েছে) দিয়ে সেভ করা এন্ট্রিগুলোই
             // দেখবে। প্রতিটি এন্ট্রির মালিকের IPI No fields.mpo-এর ভেতরে
             // "IPI-XXXXXX - নাম" আকারে সেভ থাকে (দেখুন collectEntry/mpoText)।
-            const myIpi = isAdmin ? null : norm(selfIpi());
+            const storeMode = isStoreStaff();
+            const myIpi = isAdmin || storeMode ? null : norm(selfIpi());
             // Area Manager হলে: নিজের এরিয়ার অধীন সব টেরিটরির এন্ট্রি দেখবে
             // (এন্ট্রিতে সেভ থাকা employeeInfo.amIpi / areaName মিলিয়ে;
             // পুরনো এন্ট্রিতে employeeInfo না থাকলে AM-এর নাম দিয়ে মেলানো হয়)
@@ -9086,7 +9443,13 @@
               .toUpperCase();
             function entryUnderMyDepot(entry) {
               const info = (entry && entry.employeeInfo) || {};
-              if (!entry || !entry.signatureRsm) return false;
+              if (
+                !entry ||
+                !entry.signatureAm ||
+                !entry.signatureRsm ||
+                !entry.storeVerified
+              )
+                return false;
               // Office_Staff রেকর্ডে ডিপো-নাম থাকে না; সেক্ষেত্রে এই (Dinajpur)
               // ডাটাবেসের সব RSM-সই-হওয়া এন্ট্রিই তার
               if (!myDepotName || !info.depotName) return true;
@@ -9164,7 +9527,13 @@
                     (reportMode === "summary" || isAdmin)
                   )
                     return;
-                  if (vp === "DEPOT MANAGER" && !data.signatureRsm) return;
+                  if (
+                    vp === "DEPOT MANAGER" &&
+                    (!data.signatureAm ||
+                      !data.signatureRsm ||
+                      !data.storeVerified)
+                  )
+                    return;
                   if (
                     myIpi &&
                     entryOwnerIpi(data) !== myIpi &&
@@ -9179,7 +9548,7 @@
             });
             // ---- AM/RSM ফিল্টার: Area (শুধু RSM), Territory, স্বাক্ষরের অবস্থা ----
             const supMode = amMode || rsmMode || dmMode;
-            const filterMode = supMode || isAdmin;
+            const filterMode = supMode || isAdmin || storeMode;
             const reportBaseHadData = entries.length > 0;
             const infoOf = (e) => e.entry.employeeInfo || {};
             const areaKey = (e) => infoOf(e).areaName || "Unknown Area";
@@ -9219,6 +9588,16 @@
                       ["dm", "Pending with Depot Manager"],
                       ["done", "Completed"],
                     ]
+                  : storeMode
+                    ? [
+                        ["all", "All"],
+                        ["am", "AM স্বাক্ষর বাকি"],
+                        ["rsm", "RSM স্বাক্ষর বাকি"],
+                        ["dm", "DM-এ পাঠানো বাকি"],
+                        ["sending", "DM-এর কাছে পাঠানো"],
+                        ["dmSigned", "DM স্বাক্ষরিত"],
+                        ["posted", "POST সম্পন্ন"],
+                      ]
                   : [
                       ["all", "All"],
                       ["unsigned", "Unsigned"],
@@ -9234,11 +9613,13 @@
               }
               const adminAreaOn = isAdmin && vp === "ADMIN";
               const adminSignOn = isAdmin && vp === "ADMIN";
-              $("rdAreaWrap").hidden = !(rsmMode || dmMode || adminAreaOn);
+              $("rdAreaWrap").hidden =
+                !(rsmMode || dmMode || adminAreaOn || storeMode);
               $("rdFilters").hidden = false;
               $("rdTerrWrap").hidden = false;
               $("rdSignWrap").hidden =
-                !(amMode || dmMode || adminSignOn) || reportMode === "summary";
+                !(amMode || dmMode || adminSignOn || storeMode) ||
+                reportMode === "summary";
               // RSM: "Generate" মোডে শুধু যেগুলোতে তার সই এখনো পড়েনি
               const signOk = (e) => {
                 if (isAdmin && !supMode) {
@@ -9246,6 +9627,30 @@
                   return (
                     reportMode === "summary" || v === "all" || v === stageOf(e)
                   );
+                }
+                if (storeMode) {
+                  if (reportMode === "summary") return true;
+                  const v = $("rdSign").value;
+                  if (v === "am") return !e.entry.signatureAm;
+                  if (v === "rsm")
+                    return !!e.entry.signatureAm && !e.entry.signatureRsm;
+                  if (v === "dm")
+                    return (
+                      !!e.entry.signatureAm &&
+                      !!e.entry.signatureRsm &&
+                      !e.entry.storeVerified &&
+                      !e.entry.signatureDm &&
+                      !e.entry.posted
+                    );
+                  if (v === "sending")
+                    return (
+                      !!e.entry.storeVerified &&
+                      !e.entry.signatureDm &&
+                      !e.entry.posted
+                    );
+                  if (v === "dmSigned") return !!e.entry.signatureDm;
+                  if (v === "posted") return !!e.entry.posted;
+                  return true;
                 }
                 if (rsmMode)
                   return reportMode === "summary" || !isSignedByMe(e);
@@ -9258,7 +9663,7 @@
                     : true;
               };
               const afterSign = entries.filter(signOk);
-              if (rsmMode || dmMode || isAdmin) {
+              if (rsmMode || dmMode || isAdmin || storeMode) {
                 const areas = Array.from(
                   new Set(afterSign.map(areaKey)),
                 ).sort();
@@ -9270,7 +9675,8 @@
                 );
               }
               const areaSel =
-                (rsmMode || dmMode || isAdmin) && !$("rdAreaWrap").hidden
+                (rsmMode || dmMode || isAdmin || storeMode) &&
+                !$("rdAreaWrap").hidden
                   ? $("rdArea").value
                   : "";
               const forTerr = areaSel
@@ -9351,14 +9757,18 @@
               valueTotal += entryValue;
               entryValueList[index] = entryValue;
               const rowElement = document.createElement("tr");
+              if (storeMode && isStoreDmEligible(entry))
+                rowElement.classList.add("rd-dm-eligible");
               const checkCell = document.createElement("td");
-              const checkInput = document.createElement("input");
-              checkInput.type = "checkbox";
-              checkInput.className = "rd-check rd-row-check";
-              checkInput.checked = false;
-              checkInput.dataset.idx = String(index);
-              checkInput.addEventListener("change", updateRdCheckAllState);
-              checkCell.appendChild(checkInput);
+              if (entry.signatureAm && entry.signatureRsm) {
+                const checkInput = document.createElement("input");
+                checkInput.type = "checkbox";
+                checkInput.className = "rd-check rd-row-check";
+                checkInput.checked = false;
+                checkInput.dataset.idx = String(index);
+                checkInput.addEventListener("change", updateRdCheckAllState);
+                checkCell.appendChild(checkInput);
+              }
               rowElement.appendChild(checkCell);
               const chemist =
                 [fields.ccode, fields.chemist]
@@ -9366,7 +9776,6 @@
                   .join(" - ") || "-";
               [
                 String(index + 1),
-                entry.invoiceNo || "-",
                 chemist,
                 (fields.mpo || "-") +
                   ((rsmMode || dmMode || isAdmin) &&
@@ -9380,6 +9789,21 @@
                 cell.textContent = text;
                 rowElement.appendChild(cell);
               });
+              const invoiceCell = document.createElement("td");
+              if (storeMode || isAdmin) {
+                const invoiceButton = document.createElement("button");
+                invoiceButton.type = "button";
+                invoiceButton.className = "rd-invoice-edit-btn";
+                invoiceButton.textContent = entry.invoiceNo || "-";
+                invoiceButton.title = "Invoice edit করুন";
+                invoiceButton.addEventListener("click", () =>
+                  openStoreInvoiceEdit(date, key, entry),
+                );
+                invoiceCell.appendChild(invoiceButton);
+              } else {
+                invoiceCell.textContent = entry.invoiceNo || "-";
+              }
+              rowElement.insertBefore(invoiceCell, rowElement.children[2]);
               const actionCell = document.createElement("td");
               const viewButton = document.createElement("button");
               viewButton.type = "button";
@@ -9396,9 +9820,9 @@
                   const td = document.createElement("td");
                   td.className = "rd-ver";
                   const sp = document.createElement("span");
-                  sp.className = ok
+                  sp.className = ok || no === "Check Ok" || no === "Sending"
                     ? "rd-ver-ok"
-                    : no === "Pending"
+                    : no === "Pending" || no === "Not Sending"
                       ? "rd-ver-no"
                       : "rd-ver-off";
                   sp.appendChild(document.createTextNode(ok ? yes + " ✓" : no));
@@ -9416,7 +9840,17 @@
                   verCell(!!entry.signatureRsm, "Sign", "Pending"),
                 );
                 rowElement.appendChild(
-                  verCell(!!entry.signatureDm, "Sign", "Pending"),
+                  verCell(
+                    !!entry.signatureDm,
+                    "Sign",
+                    storeMode
+                      ? entry.storeVerified
+                        ? "Sending"
+                        : "Not Sending"
+                      : dmMode
+                        ? "Check Ok"
+                        : "Pending",
+                  ),
                 );
                 rowElement.appendChild(
                   verCell(!!entry.posted, "Final", "Progress", "Approved"),
@@ -9438,10 +9872,10 @@
               finalRows = [];
               groups.forEach((g, a) => {
                 const tr = document.createElement("tr");
-                // এরিয়ার শেষে — বামে: AREA + TOTAL CHEMIST; Value কলামের নিচে: TOTAL = ভ্যালু
+                // এরিয়ার শেষে — AREA + TOTAL CHEMIST বামে, TOTAL = MPO-তে ও পরিমাণ Value-তে।
                 const bg = "background:#e8eef8;font-weight:700;";
                 const tdL = document.createElement("td");
-                tdL.colSpan = 5;
+                tdL.colSpan = 4;
                 tdL.style.cssText =
                   bg + "text-align:right;padding-right:14px;letter-spacing:0.5px;word-spacing:4px";
                 // নন-ব্রেকিং স্পেস (\u00a0) দিয়ে ফাঁকা রাখা হয়েছে, নইলে HTML একাধিক স্পেস এক করে ফেলে
@@ -9450,28 +9884,43 @@
                   String(a).toUpperCase() +
                   "\u00a0\u00a0\u00a0\u00a0,\u00a0\u00a0\u00a0\u00a0TOTAL\u00a0CHEMIST\u00a0\u00a0:\u00a0\u00a0" +
                   g.rows.length;
+                const tdLabel = document.createElement("td");
+                tdLabel.style.cssText =
+                  bg + "text-align:right;white-space:nowrap";
+                tdLabel.textContent = "TOTAL =";
                 const tdV = document.createElement("td");
-                tdV.style.cssText =
-                  bg + "text-align:right;white-space:nowrap;width:90px";
-                tdV.textContent = "TOTAL = " + Math.round(g.val);
+                tdV.style.cssText = bg + "text-align:right;white-space:nowrap";
+                tdV.textContent = String(Math.round(g.val));
                 const tdR = document.createElement("td");
                 tdR.colSpan = 5;
                 tdR.style.cssText = bg;
-                tr.append(tdL, tdV, tdR);
+                tr.append(tdL, tdLabel, tdV, tdR);
                 // টোটাল সারি এরিয়ার এন্ট্রিগুলোর শেষে (নিচে) বসে
                 finalRows.push(...g.rows, tr);
               });
             }
             $("rdRows").replaceChildren(...finalRows);
-            $("rdCheckAll").checked = false;
-            $("rdCheckAll").indeterminate = false;
+            updateRdCheckAllState();
             $("rdGrandValue").textContent = String(Math.round(valueTotal));
             $("rdCount").textContent = String(entries.length);
             $("rdSumQty").textContent = String(quantityTotal);
             $("rdSumValue").textContent = String(Math.round(valueTotal));
             $("rdSummary").hidden = false;
-            lastReportEntries = entries.map(({ date, key }) => ({ date, key }));
+            lastReportEntries = entries.map(({ date, key, entry }) => ({
+              date,
+              key,
+              entry,
+            }));
             $("rdActions").hidden = entries.length === 0;
+            const dmReadyCount = lastReportEntries.filter(
+              ({ entry }) => isStoreDmEligible(entry),
+            ).length;
+            $("rdSendAllDm").hidden = !storeMode;
+            $("rdSendAllDm").disabled = dmReadyCount === 0;
+            $("rdSendAllDm").textContent =
+              dmReadyCount > 0
+                ? "সব যোগ্য Invoice DM-এ পাঠান (" + dmReadyCount + ")"
+                : "DM-এ পাঠানোর মতো Invoice নেই";
             $("rdPrintAll").textContent =
               reportMode === "summary"
                 ? "Summary View/Print"
@@ -10090,12 +10539,15 @@
           const vp = new URLSearchParams();
           vp.set("viewDate", isoDateStr(date));
           vp.set("viewKey", key);
+          if (isStoreStaff()) vp.set("storeReportReturn", "1");
+          if (isDepotManager()) vp.set("dmReportReturn", "1");
           url.hash = vp.toString();
           openInApp(url.href);
         }
         $("rdPrintAll").onclick = () => {
           if (!lastReportEntries.length) return;
           if (needAmSignature(() => $("rdPrintAll").onclick())) return;
+          const storeReportReturn = isStoreStaff();
           const checkedIdx = Array.from(
             document.querySelectorAll("#rdRows .rd-row-check"),
           )
@@ -10136,6 +10588,10 @@
               })),
             ),
           );
+          if (reportMode !== "summary" && storeReportReturn)
+            pp.set("storeReportReturn", "1");
+          if (reportMode !== "summary" && isDepotManager())
+            pp.set("dmReportReturn", "1");
           url.hash = pp.toString();
           openInApp(url.href);
         };
@@ -10149,6 +10605,22 @@
         };
 
         $("openEntry").onclick = () => {
+          const p = __pageParams();
+          if (
+            p.get("storeReportReturn") === "1" ||
+            p.get("dmReportReturn") === "1"
+          ) {
+            if (window.opener && !window.opener.closed) {
+              window.opener.focus();
+              window.close();
+            } else {
+              showMessage(
+                "STORE রিপোর্টের আগের ট্যাবটি খোলা নেই। রিপোর্টে ফিরতে STORE-এ আবার যাচাই করুন।",
+                "warning",
+              );
+            }
+            return;
+          }
           // "All Print", "Summary" ও "দেখুন" পেজে (viewDate/viewKey বা
           // allPrint=1/summaryPrint=1) localStorage থেকে IPI/MPO/AM ফিরিয়ে
           // আনার কোড এবং dlg.showModal() কখনো চলে না (নিচের return-এর
@@ -10156,7 +10628,6 @@
           // Information সেকশনে নিয়ে যেত। এই গার্ডটা সেই পেজ থেকে পরিষ্কার
           // URL-এ (প্যারামিটার ছাড়া) নিয়ে গিয়ে অ্যাপ নতুন করে লোড করায়,
           // যাতে সেভ করা IPI/MPO/AM ঠিকমতো ফিরে আসে।
-          const p = __pageParams();
           if (
             p.get("viewDate") ||
             p.get("viewKey") ||
@@ -10655,6 +11126,13 @@
               DM_ROLE.test(selfInfo().designation || ""))
           );
         }
+        function isStoreStaff() {
+          return (
+            !isAdmin &&
+            selfInfo().officeStaff === true &&
+            selfInfo().officeStaffRole === "STORE"
+          );
+        }
         function isSupervisor() {
           return isAreaManager() || isRsm() || isDepotManager();
         }
@@ -10672,6 +11150,7 @@
         let adminViewAs = "ADMIN";
         function roleLabel() {
           if (isAdmin) return adminViewAs;
+          if (isStoreStaff()) return "STORE";
           if (isDepotManager()) return "DEPOT MANAGER";
           if (isRsm())
             return /^zone/i.test(selfInfo().team || "") ? "ZONE" : "REGION";
@@ -11880,9 +12359,10 @@
         async function findRecord(ipi, selectedRole = "") {
           if (selectedRole === "DEPOT MANAGER") {
             const officeStaff = await findOfficeStaff(ipi);
-            return officeStaff &&
-              DM_ROLE.test(pick(officeStaff, "DESIGNATION"))
-              ? officeStaff
+            if (!officeStaff) return null;
+            const designation = pick(officeStaff, "DESIGNATION");
+            return DM_ROLE.test(designation)
+              ? { ...officeStaff, _officeStaffRole: selectedRole }
               : null;
           }
           const fieldForceOnly = [
@@ -12009,6 +12489,7 @@
 
         // ---- OK বাটন: IPI-র খোঁজা (লুকআপ) শেষ না হওয়া পর্যন্ত ঝাপসা ও নিষ্ক্রিয় ----
         let lookupInFlight = 0;
+        let storeVerificationPassed = false;
         function refreshOk() {
           const busy = lookupTimerActive || lookupInFlight > 0;
           const b = $("empOk");
@@ -12047,7 +12528,7 @@
           try {
             const credentialsPromise = findCredentialRecords(ipi);
             let employeePromise =
-              selectedRole === "ADMIN_FIELD_FORCE"
+              selectedRole === "ADMIN_FIELD_FORCE" || selectedRole === "STORE"
                 ? null
                 : findRecord(ipi, selectedRole).then(
                     (rec) => ({ rec }),
@@ -12074,6 +12555,21 @@
               }
               currentEmployeeInfo = { ipi, admin: true };
               setSt("ok", "");
+              return;
+            }
+            if (selectedRole === "STORE") {
+              pendingPassRecord = passRec;
+              setPassRow(true);
+              if (!STORE_IPIS.has(ipi)) {
+                setSt("err", "এই IPI নম্বরটি STORE যাচাইয়ের জন্য অনুমোদিত নয়।");
+              } else if (!String(pick(passRec, "PASSWORD") || "").trim()) {
+                setSt(
+                  "err",
+                  "STORE যাচাইয়ের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
+                );
+              } else {
+                setSt("ok", "");
+              }
               return;
             }
             if (!employeePromise) {
@@ -12123,13 +12619,14 @@
             const amInfo = await amInfoPromise;
             if (mine !== seq) return;
             if (rec._officeStaff) {
-              // অফিস স্টাফ (Depot Manager): টেরিটরি/এরিয়া/ডিপো-নাম নেই
+              // অফিস স্টাফদের টেরিটরি/এরিয়া/ডিপো-নাম নেই
               currentEmployeeInfo = {
                 ipi: pick(rec, "IPI NO") || ipi,
                 mpoName: name,
                 designation: pick(rec, "DESIGNATION"),
                 team: "",
                 officeStaff: true,
+                officeStaffRole: rec._officeStaffRole || selectedRole,
               };
               currentTerritoryCode = "";
               updateTerritoryFields();
@@ -12704,6 +13201,21 @@
           ic.href = logoImg.src;
         }
         const viewParams = __pageParams();
+        function enableReportReturn(label) {
+          $("openEntry").textContent = label;
+          if (!window.opener || window.opener.closed) return;
+          history.pushState({ storeReportReturn: true }, "", location.href);
+          window.addEventListener(
+            "popstate",
+            () => {
+              if (window.opener && !window.opener.closed) {
+                window.opener.focus();
+                window.close();
+              }
+            },
+            { once: true },
+          );
+        }
         if (__pendingView) {
           const backApp = $("backToApp");
           backApp.hidden = false;
@@ -12723,6 +13235,10 @@
           document.title = "Invoice";
           setTabLogo();
           showPage("none");
+          if (viewParams.get("storeReportReturn") === "1")
+            enableReportReturn("রিপোর্টে ফিরুন");
+          else if (viewParams.get("dmReportReturn") === "1")
+            enableReportReturn("Back");
           (async () => {
             try {
               const date = parseDateInput(viewDate);
@@ -12749,6 +13265,10 @@
           document.title = "Invoice Print";
           setTabLogo();
           showPage("none");
+          if (viewParams.get("storeReportReturn") === "1")
+            enableReportReturn("রিপোর্টে ফিরুন");
+          else if (viewParams.get("dmReportReturn") === "1")
+            enableReportReturn("Back");
           (async () => {
             let entries = [];
             try {
@@ -12928,8 +13448,14 @@
         // দরকার নেই। নতুন ব্রাউজার/ডিভাইসে localStorage খালি থাকায় এই অংশ
         // কাজ করবে না, তখন আবার নতুন করে লগইন সেকশন থেকে শুরু করতে হবে। ----
         const savedEmp = loadEmployee();
-        const hasEmp = !!(savedEmp && savedEmp.ipi);
+        const savedRole = savedEmp && savedEmp.lookupRole;
+        const needsFreshStoreVerification = savedRole === "STORE";
+        const hasEmp = !!(savedEmp && savedEmp.ipi) && !needsFreshStoreVerification;
         let startSupervisor = false;
+        if (needsFreshStoreVerification) {
+          $("employeeRoleSelect").value = "STORE";
+          setSt("load", "STORE যাচাই করতে IPI ও পাসওয়ার্ড দিন।");
+        }
         if (hasEmp) {
           const savedAm = savedEmp.am || savedEmp.employeeInfo?.amName || "";
           const savedAmSeparator = savedAm.indexOf(" - ");
