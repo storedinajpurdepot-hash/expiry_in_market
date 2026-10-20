@@ -3176,6 +3176,9 @@
         gap: 3px;
         min-width: 0;
       }
+      #reportDlg .rd-range .rd-field[hidden] {
+        display: none;
+      }
       #reportDlg .rd-range .f {
         color: #333;
         font-size: 12px;
@@ -4332,6 +4335,11 @@
           padding: 4px;
         }
       }
+      @media print {
+        body.it-view-only {
+          display: none !important;
+        }
+      }
 </style>
   </head>
   <body>
@@ -4488,6 +4496,7 @@
               <option value="ZONE">ZONE</option>
               <option value="REGION">REGION</option>
               <option value="STORE">STORE</option>
+              <option value="IT">IT</option>
               <option value="ADMIN_FIELD_FORCE">ADMIN</option>
               <option value="DEPOT MANAGER">DEPOT MANAGER</option>
             </select>
@@ -5328,7 +5337,7 @@
             <span class="dotted-line" style="min-width: 180px"></span>
           </td>
           <td style="width: 30%; text-align: right">
-            তারিখঃ <span class="dotted-line" style="min-width: 90px"></span>
+            তারিখঃ <span class="dotted-line current-date" style="min-width: 90px"></span>
           </td>
         </tr>
       </table>
@@ -5690,6 +5699,19 @@
           </label>
           <button type="button" id="rdGenerate">Generate</button>
           <button type="button" id="rdSummaryBtn">Summary</button>
+          <label class="rd-field" id="itHistorySearch" hidden>
+            <span class="f">Posted search</span>
+            <input
+              type="text"
+              id="rdItSearch"
+              autocomplete="off"
+              placeholder="Chemist Code / Invoice No"
+            />
+          </label>
+          <button type="button" id="rdItSearchBtn" hidden>
+            Search Posted
+          </button>
+          <button type="button" id="rdItSearchClear" hidden>Clear</button>
           <div id="rdYearSel" class="rd-year" hidden>
             <button type="button" id="rdYearBtn" title="Exp সাল বাছুন (একাধিক চেক দেওয়া যাবে)">Year: সব ▾</button>
             <div id="rdYearPanel" class="rd-year-panel" hidden></div>
@@ -5735,6 +5757,12 @@
             <button type="button" id="rdSendAllDm" hidden>
               সব যোগ্য Invoice DM-এ পাঠান
             </button>
+            <button type="button" id="rdItViewSelected" hidden>
+              View
+            </button>
+            <button type="button" id="rdItPostSelected" hidden>
+              Post
+            </button>
             <button type="button" id="rdPrintAll">All Print</button>
           </div>
         </footer>
@@ -5748,6 +5776,7 @@
               <col />
               <col />
               <col />
+              <col class="c-ver" />
               <col class="c-ver" />
               <col class="c-ver" />
               <col class="c-ver" />
@@ -5769,15 +5798,19 @@
                 <th class="rd-h1">MPO Name</th>
                 <th class="rd-h1">Value</th>
                 <th class="rd-h1">Action</th>
-                <th class="rd-ver rd-ver-group" colspan="4" hidden>
+                <th class="rd-ver rd-ver-group" colspan="5" hidden>
                   Verification
                 </th>
               </tr>
               <tr id="rdHeadRow2" hidden>
-                <th class="rd-ver">AM</th>
-                <th class="rd-ver">RSM</th>
-                <th class="rd-ver">DM</th>
-                <th class="rd-ver">POST</th>
+                <th class="rd-ver" rowspan="2">AM</th>
+                <th class="rd-ver" rowspan="2">RSM</th>
+                <th class="rd-ver" rowspan="2">DM</th>
+                <th class="rd-ver rd-ver-group" colspan="2">DELIVERY STATUS</th>
+              </tr>
+              <tr id="rdHeadRow3" hidden>
+                <th class="rd-ver">INVOICE</th>
+                <th class="rd-ver">DELIVERY</th>
               </tr>
             </thead>
             <tbody id="rdRows"></tbody>
@@ -5874,6 +5907,7 @@
         const FB_DB =
           "https://dinajpur-employee-list-default-rtdb.asia-southeast1.firebasedatabase.app";
         const FB_PATH = "DINAJPUR/Field_Force";
+        const DR_LIST_PATH = FB_PATH.split("/")[0] + "/DR_List";
         // ---- Chemist তথ্যের উৎস: Google Sheet (Client ID, Name, Address,
         // Category Name, ISV Territory ID, INM Territory ID, PHARMA Territory ID) ----
         const CHEMIST_SHEET_ID = "17MJRZp6hhjeQeqj8Lrqipqv2q52t-P9AiCOCPskXUz4";
@@ -6258,6 +6292,15 @@
         summaryForm.classList.add("saved-page", "summary-page");
         summaryForm.dataset.form = "Summary Form";
         summaryForm.style.display = "none";
+        summaryForm.querySelectorAll(".info .col").forEach((column) => {
+          const rows = Array.from(column.querySelectorAll(":scope > .row"));
+          rows.sort((left, right) => {
+            const leftBoxed = left.querySelector("input").classList.contains("boxed");
+            const rightBoxed = right.querySelector("input").classList.contains("boxed");
+            return Number(rightBoxed) - Number(leftBoxed);
+          });
+          rows.forEach((row) => column.appendChild(row));
+        });
         const summaryFieldEls = {};
         ["mpo", "am", "ccode", "chemist", "wp_mpo", "wp_am", "addr"].forEach(
           (k) => {
@@ -6573,7 +6616,7 @@
           setEntrySection("Chemist Information");
           // MPO সিগনেচার: Chemist Information-এ এলে, আজকের তারিখের সিগনেচার
           // না থাকলে (নতুন দিন/নতুন IPI) সিগনেচার প্যাড খুলবে। Admin-এর লাগে না।
-          if (!isAdmin && !isStoreStaff()) {
+          if (!isAdmin && !isStoreStaff() && !isIT()) {
             setTimeout(() => {
               if (dlg.open && !$("sigDlg").open && !getTodaySignature())
                 openSignature(null);
@@ -6611,39 +6654,73 @@
           }
         }
         async function tryEmployeeOkCore() {
-          if (!$("employeeRoleSelect").value) {
-            setSt("err", "আগে dropdown থেকে কর্মীর ধরন নির্বাচন করুন।");
-            $("employeeRoleSelect").focus();
+          if (!validateLookupPrerequisites()) return;
+          const currentIpi = norm($("de_ipi").value);
+          if (!currentIpi || currentIpi !== lastLookedIpi) {
+            setSt("err", "আগে সার্চ বাটনে ক্লিক করে IPI খুঁজুন।");
+            $("de_ipi").focus();
             return;
           }
-          // নতুন IPI লেখার পর খোঁজা (lookup) শেষ হওয়ার আগেই OK চাপলে নাম/AM
-          // তখনও ফাঁকা থাকত, তাই প্রথমবার এরর আসত ও দ্বিতীয়বার চাপতে হতো।
-          // এখন চলমান/অপেক্ষমাণ খোঁজা শেষ হওয়া পর্যন্ত অপেক্ষা করে তারপর যাচাই।
-          // লুপ: অপেক্ষার মধ্যে নতুন লুকআপ শুরু হলে (যেমন মোবাইলে কীবোর্ড নামার
-          // পর change ইভেন্ট) সেটাও শেষ হওয়া পর্যন্ত অপেক্ষা করে, তাই এক ক্লিকেই কাজ হয়
-          // সার্চ বাটন না চেপেই OK চাপলে (পাসওয়ার্ড এড়ানো ঠেকাতে) আগে এই IPI খোঁজা হয়
-          {
-            const cur = $("de_ipi").value.trim();
-            if (cur && norm(cur) !== lastLookedIpi && lookupInFlight === 0) {
-              clearTimeout(timer);
-              lookupTimerActive = false;
-              lookupRun = lookup();
+          if (lookupInFlight > 0 && lookupRun) {
+            try {
+              await lookupRun;
+            } catch (error) {
+              setSt("err", "IPI খোঁজা সম্পন্ন হয়নি। আবার সার্চ করুন।");
+              return;
             }
           }
-          for (let n = 0; n < 6; n++) {
-            if (lookupTimerActive) {
-              clearTimeout(timer);
-              lookupTimerActive = false;
-              lookupRun = lookup();
+          if ($("employeeRoleSelect").value === "IT") {
+            const ipi = norm($("de_ipi").value);
+            const storedPass = String(
+              pick(pendingPassRecord, "PASSWORD") || "",
+            ).trim();
+            const enteredPass = $("de_adminPass").value.trim();
+            if (!IT_IPIS.has(ipi)) {
+              setSt("err", "এই IPI নম্বরটি IT লগইনের জন্য অনুমোদিত নয়।");
+              return;
             }
-            const run = lookupRun;
-            if (run) {
-              try {
-                await run;
-              } catch (e) {}
+            if (!currentEmployeeInfo.officeStaff) {
+              setSt("err", "এই IPI নম্বরটি Office_Staff তালিকায় পাওয়া যায়নি।");
+              return;
             }
-            if (!lookupTimerActive && lookupInFlight === 0 && run === lookupRun)
-              break;
+            if (!storedPass) {
+              setSt(
+                "err",
+                "IT লগইনের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
+              );
+              return;
+            }
+            if (!enteredPass) {
+              setSt("err", "পাসওয়ার্ড দিন।");
+              $("de_adminPass").focus();
+              return;
+            }
+            if (enteredPass !== storedPass) {
+              setSt("err", "পাসওয়ার্ড সঠিক নয়।");
+              $("de_adminPass").value = "";
+              $("de_adminPass").focus();
+              return;
+            }
+            $("de_ipi").value = ipi;
+            $("de_mpo").value = "IT";
+            currentEmployeeInfo = {
+              ...currentEmployeeInfo,
+              ipi,
+              mpoName: "IT",
+              officeStaff: true,
+              officeStaffRole: "IT",
+            };
+            currentTerritoryCode = "";
+            isAdmin = false;
+            saveEmployee();
+            updateTerritoryFields();
+            syncChemistCodeLock();
+            st.className = "ipiStatus";
+            st.textContent = "";
+            showChemistSection();
+            dlg.close();
+            openReportDialogSafe();
+            return;
           }
           if ($("employeeRoleSelect").value === "STORE") {
             const ipi = norm($("de_ipi").value);
@@ -6655,10 +6732,14 @@
               setSt("err", "এই IPI নম্বরটি STORE যাচাইয়ের জন্য অনুমোদিত নয়।");
               return;
             }
+            if (!currentEmployeeInfo.officeStaff) {
+              setSt("err", "এই IPI নম্বরটি Office_Staff তালিকায় পাওয়া যায়নি।");
+              return;
+            }
             if (!storedPass) {
               setSt(
                 "err",
-                "STORE যাচাইয়ের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
+                "STORE লগইনের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
               );
               return;
             }
@@ -6677,7 +6758,7 @@
             currentEmployeeInfo = {
               ipi,
               mpoName: "STORE",
-              designation: "STORE",
+              designation: currentEmployeeInfo.designation || "STORE",
               team: "",
               officeStaff: true,
               officeStaffRole: "STORE",
@@ -6754,8 +6835,8 @@
           saveEmployee();
           st.className = "ipiStatus";
           st.textContent = "";
-          // AM / ZM / RSM / DM: সরাসরি Report ডায়ালগ
-          if (!isAdmin && isSupervisor()) {
+          // AM / ZM / RSM / DM / IT: সরাসরি Report ডায়ালগ
+          if (!isAdmin && (isSupervisor() || isIT())) {
             showChemistSection();
             dlg.close();
             openReportDialogSafe();
@@ -6774,6 +6855,7 @@
         const SIG_KEY = "formE_mpoSignature";
         const DM_ROLE = /depot/i; // Depot Manager চেনার নিয়ম (TEAM/DESIGNATION-এ "Depot")
         const STORE_IPIS = new Set(["IPI-004686", "IPI-000261"]);
+        const IT_IPIS = new Set(["IPI-000457", "IPI-000187"]);
         let sigMem = null;
         function todayStr() {
           const d = new Date();
@@ -8900,8 +8982,9 @@
           dlg.close();
           openBlankForm();
         };
-        // AM/ZM/RSM/DM (Admin নয়) — রিপোর্টই তাদের হোম স্ক্রিন
-        const isSupervisorHome = () => !isAdmin && isSupervisor();
+        // AM/ZM/RSM/DM/IT (Admin নয়) — রিপোর্টই তাদের হোম স্ক্রিন
+        const isSupervisorHome = () =>
+          !isAdmin && (isSupervisor() || isIT());
         function openReportDialog() {
           const today = new Date();
           const todayStr =
@@ -8914,29 +8997,37 @@
           if (!$("rdTo").value) $("rdTo").value = todayStr;
           $("rdStatus").textContent = "";
           $("rdStatus").className = "rd-status";
+          itHistoricalSearchResults = null;
+          itHistoricalSearchTerm = "";
+          $("rdItSearch").value = "";
           $("rdSummary").hidden = true;
           $("rdActions").hidden = true;
           $("rdSendAllDm").hidden = !isStoreStaff();
+          const showItHistorySearch = isIT() && !isAdmin;
+          $("itHistorySearch").hidden = !showItHistorySearch;
+          $("rdItSearchBtn").hidden = !showItHistorySearch;
+          $("rdItSearchClear").hidden = !showItHistorySearch;
           $("rdRows").replaceChildren();
           $("rdGrandValue").textContent = "0";
           $("rdCheckAll").checked = false;
           $("rdCheckAll").indeterminate = false;
           $("rdCheckAll").disabled = true;
           lastReportEntries = [];
-          reportMode = "raw";
+          reportMode = isIT() ? "summary" : "raw";
           // Generate/All Print সবার জন্য উন্মুক্ত, কিন্তু Summary (ও তার
           // ভেতরের Post) শুধু Admin-এর জন্যই দেখা যাবে।
           $("rdSummaryBtn").hidden = !(
             (isAdmin && adminViewAs === "ADMIN") ||
             /^(ZONE|REGION)$/.test(roleLabel())
           );
+          if (isIT()) $("rdSummaryBtn").hidden = true;
           $("rdPostedBtn").hidden = !(isAdmin && adminViewAs === "ADMIN");
           $("rdYearSel").hidden = !/^(ZONE|REGION)$/.test(roleLabel());
           updateReportTitle();
           // শুধু AM-এর জন্য New Entry বাটন; হোম স্ক্রিনে থাকলে Close বাটন নেই
           const home = isSupervisorHome();
           $("rdNewEntry").hidden = !isAreaManager();
-          $("rdRefresh").hidden = !(isSupervisor() || isAdmin);
+          $("rdRefresh").hidden = !(isSupervisor() || isAdmin || isIT());
           $("rdClose").hidden = home;
           $("rdClose").textContent = "Close";
           if (home && dlg.open) dlg.close();
@@ -9035,6 +9126,8 @@
         // মূল সেভ-ফরম্যাটে প্রিন্ট (allPrint=1), "summary" হলে Summary
         // ফরম্যাটে ভিউ/প্রিন্ট (summaryPrint=1)। ডিফল্ট "raw"।
         let reportMode = "raw";
+        let itHistoricalSearchResults = null;
+        let itHistoricalSearchTerm = "";
         function updateRdCheckAllState() {
           const boxes = Array.from(
             document.querySelectorAll("#rdRows .rd-row-check"),
@@ -9052,11 +9145,26 @@
           checkAll.indeterminate =
             checkedCount > 0 && checkedCount < selectableBoxes.length;
         }
+        function selectedReportEntries() {
+          const checked = new Set(
+            Array.from(document.querySelectorAll("#rdRows .rd-row-check"))
+              .filter((box) => box.checked)
+              .map((box) => Number(box.dataset.idx)),
+          );
+          return lastReportEntries.filter((_, index) => checked.has(index));
+        }
+        function updateItActionButtons() {
+          const selected = selectedReportEntries();
+          $("rdItViewSelected").disabled = selected.length === 0;
+          $("rdItPostSelected").disabled =
+            !selected.some(({ entry }) => !entry.posted);
+        }
         $("rdCheckAll").onchange = () => {
           const checked = $("rdCheckAll").checked;
           document.querySelectorAll("#rdRows .rd-row-check").forEach((box) => {
             if (!box.disabled) box.checked = checked;
           });
+          updateItActionButtons();
         };
         let reportCache = null;
         let reportCacheRange = "";
@@ -9085,6 +9193,44 @@
             storeVerified: true,
             storeVerifiedAt: new Date().toISOString(),
             storeVerifiedBy: selfIpi(),
+          });
+          return true;
+        }
+        let deliveryRepresentativeKeys = null;
+        async function getDeliveryRepresentativeKeys() {
+          if (!deliveryRepresentativeKeys) {
+            const records = await getJSON(FB_DB + "/" + DR_LIST_PATH + ".json");
+            deliveryRepresentativeKeys = Object.keys(records || {})
+              .filter((key) => key.includes("IPI-"))
+              .sort((left, right) => left.localeCompare(right));
+          }
+          if (!deliveryRepresentativeKeys.length)
+            throw new Error("DR_List-এ কোনো Delivery Representative পাওয়া যায়নি।");
+          return deliveryRepresentativeKeys;
+        }
+        async function markInvoiceDelivered(date, key, deliveryRepresentative) {
+          if (!storeVerificationPassed || !isStoreStaff())
+            throw new Error("STORE যাচাই ছাড়া Delivery নিশ্চিত করা যাবে না।");
+          if (!deliveryRepresentative)
+            throw new Error("Delivery Representative নির্বাচন করুন।");
+          const representatives = await getDeliveryRepresentativeKeys();
+          if (!representatives.includes(deliveryRepresentative))
+            throw new Error("নির্বাচিত Delivery Representative DR_List-এ নেই।");
+          const path = expiryPath(date) + "/" + key;
+          const data = await firestoreGetDoc(path);
+          if (!data) throw new Error("এই Invoice আর পাওয়া যাচ্ছে না।");
+          if (!data.posted || data.postedByRole !== "IT")
+            throw new Error("শুধু IT থেকে পোস্ট করা Invoice-এর Delivery নিশ্চিত করা যাবে।");
+          if (data.deliveryReceived) return false;
+          await firestoreSetDoc(path, {
+            ...(data._sourceData || data),
+            deliveryReceived: true,
+            deliveryReceivedAt: new Date().toISOString(),
+            deliveryReceivedBy: selfIpi(),
+            deliveryReceivedByName: selfInfo().mpoName || $("de_mpo").value.trim(),
+            deliveryRepresentativeKey: deliveryRepresentative,
+            deliveryRepresentativeIpi:
+              deliveryRepresentative.match(/IPI-[A-Z0-9]+/i)?.[0] || "",
           });
           return true;
         }
@@ -9361,43 +9507,154 @@
           }
           return { fromValue: f || t, toValue: t || f };
         }
+        async function queryItHistoryCollection(dayCollectionId, fieldPath, value) {
+          const response = await firestoreFetch(FIRESTORE_BASE + ":runQuery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              structuredQuery: {
+                from: [{ collectionId: dayCollectionId, allDescendants: true }],
+                where: {
+                  fieldFilter: {
+                    field: { fieldPath },
+                    op: "EQUAL",
+                    value: { stringValue: value },
+                  },
+                },
+              },
+            }),
+          });
+          if (!response.ok) await firestoreThrowFor(response);
+          return firestoreJson(response);
+        }
+        async function searchItPostedEntries(rawTerm) {
+          const term = rawTerm.trim();
+          if (!term) throw new Error("Chemist Code বা Invoice No লিখুন।");
+          const invoiceSearch = /MEXP/i.test(term);
+          const fieldPath = invoiceSearch ? "invoiceNo" : "fields.ccode";
+          const value = invoiceSearch
+            ? term.toUpperCase()
+            : normalizeChemistCode(term);
+          const docs = new Map();
+          const dayIds = Array.from({ length: 31 }, (_, index) =>
+            String(index + 1).padStart(2, "0"),
+          );
+          for (let start = 0; start < dayIds.length; start += 5) {
+            const batch = dayIds.slice(start, start + 5);
+            const results = await Promise.all(
+              batch.map((dayId) =>
+                queryItHistoryCollection(dayId, fieldPath, value),
+              ),
+            );
+            results.flat().forEach((result) => {
+              const document = result && result.document;
+              if (!document) return;
+              const documentPath = String(document.name || "")
+                .split("/documents/")
+                .pop();
+              const parts = documentPath.split("/");
+              if (parts[0] !== "Dinajpur" || parts.length < 4) return;
+              const monthMatch = parts[1].match(/^([A-Za-z]{3})-(\d{4})$/);
+              if (!monthMatch) return;
+              const month = monthNames.indexOf(monthMatch[1]);
+              const day = Number(parts[2]);
+              if (month < 0 || !Number.isInteger(day) || day < 1 || day > 31)
+                return;
+              const date = new Date(Number(monthMatch[2]), month, day);
+              if (
+                date.getFullYear() !== Number(monthMatch[2]) ||
+                date.getMonth() !== month ||
+                date.getDate() !== day
+              )
+                return;
+              const id = parts[3];
+              const data = normalizeExpiryEntry(
+                fromFirestoreFields(document.fields || {}),
+              );
+              if (!data || !data.posted || !data.signatureDm) return;
+              data.invoiceNo = data.invoiceNo || id;
+              docs.set(documentPath, {
+                date,
+                id,
+                data,
+              });
+            });
+          }
+          const byDate = new Map();
+          docs.forEach(({ date, id, data }) => {
+            const dateKey = isoDateStr(date);
+            if (!byDate.has(dateKey)) byDate.set(dateKey, { date, docs: [] });
+            byDate.get(dateKey).docs.push({ id, data });
+          });
+          return Array.from(byDate.values()).sort(
+            (left, right) => left.date - right.date,
+          );
+        }
+        async function runItPostedSearch(rawTerm) {
+          if (!isIT()) return;
+          const button = $("rdItSearchBtn");
+          button.disabled = true;
+          $("rdStatus").className = "rd-status";
+          $("rdStatus").textContent = "সব তারিখের পোস্ট করা ডাটা খোঁজা হচ্ছে…";
+          try {
+            itHistoricalSearchResults = await searchItPostedEntries(rawTerm);
+            itHistoricalSearchTerm = rawTerm.trim();
+            reportMode = "summary";
+            updateReportTitle();
+            await generateReport(false);
+          } catch (error) {
+            $("rdStatus").className = "rd-status err";
+            $("rdStatus").textContent =
+              error.code === "perm"
+                ? "পোস্ট করা ডাটা পড়ার অনুমতি নেই (Firebase Rules)।"
+                : error.detail
+                  ? "ডাটা খোঁজা যায়নি: " + error.detail
+                  : error.message ||
+                    "ডাটা খোঁজা যায়নি (ইন্টারনেট/সার্ভার সমস্যা)।";
+          } finally {
+            button.disabled = false;
+          }
+        }
         async function generateReport(useCache) {
           const { fromValue, toValue } = reportRange();
+          const historicalItSearchActive =
+            isIT() && Array.isArray(itHistoricalSearchResults);
           const status = $("rdStatus");
           status.className = "rd-status";
           status.textContent = ""; // আগের লেখা মুছে নতুন করে শুরু
-          if (!fromValue || !toValue) {
+          if (!historicalItSearchActive && (!fromValue || !toValue)) {
             showMessage("Please enter From and To dates.", "warning");
             return;
           }
-          const from = parseDateInput(fromValue);
-          const to = parseDateInput(toValue);
-          if (from > to) {
-            showMessage(
-              "From date must be on or before the To date.",
-              "warning",
-            );
-            return;
-          }
-          const dayCount = Math.round((to - from) / 86400000) + 1;
-          if (dayCount > MAX_REPORT_DAYS) {
-            showMessage(
-              "Maximum " +
-                MAX_REPORT_DAYS +
-                " days can be shown at once. Please shorten the range.",
-              "warning",
-            );
-            return;
-          }
-          const dates = Array.from(
-            { length: dayCount },
-            (_, index) =>
+          let dates = [];
+          if (!historicalItSearchActive) {
+            const from = parseDateInput(fromValue);
+            const to = parseDateInput(toValue);
+            if (from > to) {
+              showMessage(
+                "From date must be on or before the To date.",
+                "warning",
+              );
+              return;
+            }
+            const dayCount = Math.round((to - from) / 86400000) + 1;
+            if (dayCount > MAX_REPORT_DAYS) {
+              showMessage(
+                "Maximum " +
+                  MAX_REPORT_DAYS +
+                  " days can be shown at once. Please shorten the range.",
+                "warning",
+              );
+              return;
+            }
+            dates = Array.from({ length: dayCount }, (_, index) =>
               new Date(
                 from.getFullYear(),
                 from.getMonth(),
                 from.getDate() + index,
               ),
-          );
+            );
+          }
           const generateButton = $("rdGenerate");
           generateButton.disabled = true;
           status.innerHTML =
@@ -9407,8 +9664,9 @@
           $("rdRows").replaceChildren();
           lastReportEntries = [];
           try {
-            const results =
-              useCache && reportCache
+            const results = historicalItSearchActive
+              ? itHistoricalSearchResults
+              : useCache && reportCache
                 ? reportCache
                 : await Promise.all(
                     dates.map(async (date) => {
@@ -9420,8 +9678,10 @@
                       }
                     }),
                   );
-            reportCache = results;
-            reportCacheRange = fromValue + "|" + toValue;
+            if (!historicalItSearchActive) {
+              reportCache = results;
+              reportCacheRange = fromValue + "|" + toValue;
+            }
             const failed = results.find((result) => result.error);
             let entries = [];
             // Admin সব IPI-এর ডাটা দেখতে পাবে; non-admin শুধু নিজের IPI No
@@ -9429,7 +9689,8 @@
             // দেখবে। প্রতিটি এন্ট্রির মালিকের IPI No fields.mpo-এর ভেতরে
             // "IPI-XXXXXX - নাম" আকারে সেভ থাকে (দেখুন collectEntry/mpoText)।
             const storeMode = isStoreStaff();
-            const myIpi = isAdmin || storeMode ? null : norm(selfIpi());
+            const itMode = isIT();
+            const myIpi = isAdmin || storeMode || itMode ? null : norm(selfIpi());
             // Area Manager হলে: নিজের এরিয়ার অধীন সব টেরিটরির এন্ট্রি দেখবে
             // (এন্ট্রিতে সেভ থাকা employeeInfo.amIpi / areaName মিলিয়ে;
             // পুরনো এন্ট্রিতে employeeInfo না থাকলে AM-এর নাম দিয়ে মেলানো হয়)
@@ -9524,9 +9785,12 @@
                     if (!data.posted) return;
                   } else if (
                     data.posted &&
+                    !historicalItSearchActive &&
                     (reportMode === "summary" || isAdmin)
                   )
                     return;
+                  if (historicalItSearchActive && !data.posted) return;
+                  if (itMode && !data.signatureDm) return;
                   if (
                     vp === "DEPOT MANAGER" &&
                     (!data.signatureAm ||
@@ -9702,17 +9966,18 @@
               $("rdTerrWrap").hidden = true;
               $("rdSignWrap").hidden = true;
             }
-            // Verification কলাম (AM / RSM / DM / POST) — MPO, AM, RSM, DM, Admin সবার জন্য
+            // Verification কলাম — MPO, AM, RSM, DM, Admin সবার জন্য
             document
               .querySelectorAll("#reportDlg .rd-ver-group")
               .forEach((el) => {
                 el.hidden = false;
               });
             $("rdHeadRow2").hidden = false;
+            $("rdHeadRow3").hidden = false;
             document.querySelectorAll("#reportDlg th.rd-h1").forEach((el) => {
-              el.rowSpan = 2;
+              el.rowSpan = 3;
             });
-            $("rdGrandTail").colSpan = 5;
+            $("rdGrandTail").colSpan = 6;
             const areaOf = (e) =>
               (e.entry.employeeInfo && e.entry.employeeInfo.areaName) ||
               "Unknown Area";
@@ -9760,13 +10025,22 @@
               if (storeMode && isStoreDmEligible(entry))
                 rowElement.classList.add("rd-dm-eligible");
               const checkCell = document.createElement("td");
-              if (entry.signatureAm && entry.signatureRsm) {
+              if (
+                itMode ||
+                (amMode && !entry.signatureAm) ||
+                (rsmMode && !entry.signatureRsm) ||
+                (dmMode && !entry.signatureDm) ||
+                (!supMode && entry.signatureAm && entry.signatureRsm)
+              ) {
                 const checkInput = document.createElement("input");
                 checkInput.type = "checkbox";
                 checkInput.className = "rd-check rd-row-check";
                 checkInput.checked = false;
                 checkInput.dataset.idx = String(index);
-                checkInput.addEventListener("change", updateRdCheckAllState);
+                checkInput.addEventListener("change", () => {
+                  updateRdCheckAllState();
+                  updateItActionButtons();
+                });
                 checkCell.appendChild(checkInput);
               }
               rowElement.appendChild(checkCell);
@@ -9833,28 +10107,213 @@
                   td.appendChild(sp);
                   return td;
                 };
-                rowElement.appendChild(
-                  verCell(!!entry.signatureAm, "Sign", "Pending"),
-                );
-                rowElement.appendChild(
-                  verCell(!!entry.signatureRsm, "Sign", "Pending"),
-                );
-                rowElement.appendChild(
-                  verCell(
-                    !!entry.signatureDm,
-                    "Sign",
-                    storeMode
-                      ? entry.storeVerified
-                        ? "Sending"
-                        : "Not Sending"
-                      : dmMode
-                        ? "Check Ok"
-                        : "Pending",
-                  ),
-                );
-                rowElement.appendChild(
-                  verCell(!!entry.posted, "Final", "Progress", "Approved"),
-                );
+                if (
+                  entry.postedByRole === "IT" &&
+                  entry.posted &&
+                  entry.deliveryReceived
+                ) {
+                  const mergedStatusCell = document.createElement("td");
+                  mergedStatusCell.className = "rd-ver";
+                  mergedStatusCell.colSpan = 5;
+                  const mergedStatus = document.createElement("span");
+                  mergedStatus.className = "rd-ver-ok";
+                  const representativeKey = String(
+                    entry.deliveryRepresentativeKey || "",
+                  ).trim();
+                  const representativeIpi =
+                    entry.deliveryRepresentativeIpi ||
+                    representativeKey.match(/IPI-[A-Z0-9]+/i)?.[0] ||
+                    "";
+                  const representativeName = representativeIpi
+                    ? representativeKey
+                        .replace(representativeIpi, "")
+                        .replace(/^[\s_-]+/, "")
+                        .trim()
+                    : representativeKey;
+                  mergedStatus.textContent =
+                    "INVOICE OK — DELIVERY BY " +
+                    [representativeIpi, representativeName]
+                      .filter(Boolean)
+                      .join(", ");
+                  mergedStatusCell.appendChild(mergedStatus);
+                  rowElement.appendChild(mergedStatusCell);
+                } else {
+                  rowElement.appendChild(
+                    verCell(!!entry.signatureAm, "Sign", "Pending"),
+                  );
+                  rowElement.appendChild(
+                    verCell(!!entry.signatureRsm, "Sign", "Pending"),
+                  );
+                  rowElement.appendChild(
+                    verCell(
+                      !!entry.signatureDm,
+                      "Sign",
+                      storeMode
+                        ? entry.storeVerified
+                          ? "Sending"
+                          : "Not Sending"
+                        : dmMode
+                          ? "Check Ok"
+                          : "Pending",
+                    ),
+                  );
+                  if (entry.postedByRole === "IT" && entry.posted) {
+                    const invoiceStatusCell = document.createElement("td");
+                    invoiceStatusCell.className = "rd-ver";
+                    const invoiceStatus = document.createElement("span");
+                    invoiceStatus.className = "rd-ver-ok";
+                    invoiceStatus.textContent = entry.deliveryReceived
+                      ? "INVOICE OK"
+                      : "PROCESSING";
+                    invoiceStatusCell.appendChild(invoiceStatus);
+                    rowElement.appendChild(invoiceStatusCell);
+                  } else {
+                    rowElement.appendChild(
+                      verCell(
+                        !!entry.posted,
+                        "Final",
+                        "Progress",
+                        "Approved",
+                      ),
+                    );
+                  }
+                  const deliveryStatusCell = document.createElement("td");
+                  deliveryStatusCell.className = "rd-ver";
+                  if (entry.postedByRole === "IT" && entry.posted) {
+                    if (entry.deliveryReceived) {
+                      const deliveryStatus = document.createElement("span");
+                      deliveryStatus.className = "rd-ver-ok";
+                      deliveryStatus.appendChild(
+                        document.createTextNode("DELIVERED ✓"),
+                      );
+                      if (entry.deliveryRepresentativeKey) {
+                        deliveryStatus.appendChild(
+                          document.createElement("br"),
+                        );
+                        deliveryStatus.appendChild(
+                          document.createTextNode(
+                            "DR: " + entry.deliveryRepresentativeKey,
+                          ),
+                        );
+                      }
+                      if (entry.deliveryReceivedByName) {
+                        deliveryStatus.appendChild(
+                          document.createElement("br"),
+                        );
+                        deliveryStatus.appendChild(
+                          document.createTextNode(
+                            "Checked by: " + entry.deliveryReceivedByName,
+                          ),
+                        );
+                      }
+                      deliveryStatusCell.appendChild(deliveryStatus);
+                    } else if (storeMode) {
+                      const deliverButton = document.createElement("button");
+                      deliverButton.type = "button";
+                      deliverButton.className = "rd-view-btn";
+                      deliverButton.textContent = "Mark Delivered";
+                      deliverButton.title =
+                        "কাগজ হাতে পাওয়ার পর Delivery নিশ্চিত করুন";
+                      deliverButton.addEventListener("click", async () => {
+                        deliverButton.disabled = true;
+                        $("rdStatus").className = "rd-status";
+                        try {
+                          $("rdStatus").textContent = "DR তালিকা আনা হচ্ছে…";
+                          const representatives =
+                            await getDeliveryRepresentativeKeys();
+                          const representativeSelect =
+                            document.createElement("select");
+                          representativeSelect.setAttribute(
+                            "aria-label",
+                            "Delivery Representative",
+                          );
+                          const placeholder =
+                            document.createElement("option");
+                          placeholder.value = "";
+                          placeholder.textContent =
+                            "Delivery Representative বাছুন";
+                          representativeSelect.appendChild(placeholder);
+                          representatives.forEach((representative) => {
+                            const option = document.createElement("option");
+                            option.value = representative;
+                            option.textContent = representative;
+                            representativeSelect.appendChild(option);
+                          });
+                          const confirmButton =
+                            document.createElement("button");
+                          confirmButton.type = "button";
+                          confirmButton.className = "rd-view-btn";
+                          confirmButton.textContent = "Confirm";
+                          const cancelButton =
+                            document.createElement("button");
+                          cancelButton.type = "button";
+                          cancelButton.className = "rd-view-btn";
+                          cancelButton.textContent = "Cancel";
+                          const restoreDeliveryButton = () => {
+                            deliveryStatusCell.replaceChildren(deliverButton);
+                            deliverButton.disabled = false;
+                            $("rdStatus").textContent = "";
+                          };
+                          cancelButton.addEventListener(
+                            "click",
+                            restoreDeliveryButton,
+                          );
+                          confirmButton.addEventListener(
+                            "click",
+                            async () => {
+                              confirmButton.disabled = true;
+                              cancelButton.disabled = true;
+                              $("rdStatus").className = "rd-status";
+                              $("rdStatus").textContent =
+                                "Invoice Delivery নিশ্চিত করা হচ্ছে…";
+                              try {
+                                const delivered = await markInvoiceDelivered(
+                                  date,
+                                  key,
+                                  representativeSelect.value,
+                                );
+                                await generateReport(false);
+                                $("rdStatus").textContent = delivered
+                                  ? "Invoice Store-এ Delivered হিসেবে চিহ্নিত হয়েছে।"
+                                  : "Invoice আগেই Delivered হিসেবে চিহ্নিত হয়েছে।";
+                              } catch (error) {
+                                $("rdStatus").className = "rd-status err";
+                                $("rdStatus").textContent =
+                                  error.message ||
+                                  (error.status
+                                    ? "Delivery নিশ্চিত করা যায়নি — সার্ভার এরর (" +
+                                      error.status +
+                                      ")।"
+                                    : "Delivery নিশ্চিত করা যায়নি (ইন্টারনেট/সার্ভার সমস্যা)।");
+                                confirmButton.disabled = false;
+                                cancelButton.disabled = false;
+                              }
+                            },
+                          );
+                          deliveryStatusCell.replaceChildren(
+                            representativeSelect,
+                            confirmButton,
+                            cancelButton,
+                          );
+                          $("rdStatus").textContent =
+                            "যে DR কাগজটি নিয়ে এসেছে তাকে নির্বাচন করুন।";
+                        } catch (error) {
+                          $("rdStatus").className = "rd-status err";
+                          $("rdStatus").textContent =
+                            error.message ||
+                            (error.status
+                              ? "Delivery নিশ্চিত করা যায়নি — সার্ভার এরর (" +
+                                error.status +
+                                ")।"
+                              : "Delivery নিশ্চিত করা যায়নি (ইন্টারনেট/সার্ভার সমস্যা)।");
+                          deliverButton.disabled = false;
+                        }
+                      });
+                      deliveryStatusCell.appendChild(deliverButton);
+                    }
+                  }
+                  rowElement.appendChild(deliveryStatusCell);
+                }
               }
               return rowElement;
             });
@@ -9892,7 +10351,7 @@
                 tdV.style.cssText = bg + "text-align:right;white-space:nowrap";
                 tdV.textContent = String(Math.round(g.val));
                 const tdR = document.createElement("td");
-                tdR.colSpan = 5;
+                tdR.colSpan = 6;
                 tdR.style.cssText = bg;
                 tr.append(tdL, tdLabel, tdV, tdR);
                 // টোটাল সারি এরিয়ার এন্ট্রিগুলোর শেষে (নিচে) বসে
@@ -9912,6 +10371,10 @@
               entry,
             }));
             $("rdActions").hidden = entries.length === 0;
+            $("rdItViewSelected").hidden = !itMode;
+            $("rdItPostSelected").hidden = !itMode;
+            $("rdPrintAll").hidden = itMode;
+            updateItActionButtons();
             const dmReadyCount = lastReportEntries.filter(
               ({ entry }) => isStoreDmEligible(entry),
             ).length;
@@ -9936,17 +10399,26 @@
               );
             } else if (!entries.length) {
               const emptyText =
-                filterMode && reportBaseHadData
-                  ? "No entries match this filter."
-                  : reportMode === "posted"
-                    ? "No posted entries found in this date range."
-                    : "No saved entries found in this date range.";
+                historicalItSearchActive
+                  ? "এই Chemist Code / Invoice No-তে কোনো পোস্ট করা এন্ট্রি পাওয়া যায়নি।"
+                  : filterMode && reportBaseHadData
+                    ? "No entries match this filter."
+                    : reportMode === "posted"
+                      ? "No posted entries found in this date range."
+                      : "No saved entries found in this date range.";
               // ফিল্টার বদলানোর সময় বারবার পপআপ না এসে ছোট লেখা; নতুন রিপোর্টে পপআপ
-              if (useCache) {
+              if (useCache || historicalItSearchActive) {
                 status.textContent = emptyText;
               } else {
                 showMessage(emptyText, "info");
               }
+            }
+            if (historicalItSearchActive && entries.length) {
+              status.textContent =
+                entries.length +
+                "টি পোস্ট করা এন্ট্রি পাওয়া গেছে (" +
+                itHistoricalSearchTerm +
+                ")।";
             }
           } finally {
             generateButton.disabled = false;
@@ -9957,9 +10429,47 @@
           }
         }
         $("rdGenerate").onclick = () => {
-          reportMode = "raw";
+          itHistoricalSearchResults = null;
+          itHistoricalSearchTerm = "";
+          $("rdItSearch").value = "";
+          reportCache = null;
+          reportMode = isIT() ? "summary" : "raw";
           updateReportTitle();
           generateReport();
+        };
+        $("rdItSearchBtn").onclick = () =>
+          runItPostedSearch($("rdItSearch").value);
+        $("rdItSearch").addEventListener("keydown", (event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          runItPostedSearch($("rdItSearch").value);
+        });
+        $("rdItSearchClear").onclick = () => {
+          $("rdItSearch").value = "";
+          itHistoricalSearchResults = null;
+          itHistoricalSearchTerm = "";
+          reportCache = null;
+          reportMode = isIT() ? "summary" : "raw";
+          updateReportTitle();
+          generateReport(false);
+        };
+        $("rdItViewSelected").onclick = () => {
+          const selected = selectedReportEntries();
+          if (!selected.length) {
+            showMessage("আগে টেবিল থেকে অন্তত একটি এন্ট্রি নির্বাচন করুন।", "warning");
+            return;
+          }
+          openItSummary(selected, "view");
+        };
+        $("rdItPostSelected").onclick = () => {
+          const selected = selectedReportEntries().filter(
+            ({ entry }) => !entry.posted,
+          );
+          if (!selected.length) {
+            showMessage("Post করার জন্য অন্তত একটি নতুন এন্ট্রি নির্বাচন করুন।", "warning");
+            return;
+          }
+          openItSummary(selected, "post");
         };
 
         // ===== Summary বাটন: এখন আর সরাসরি প্রিন্ট না খুলে, Generate-এর মতোই
@@ -10258,6 +10768,8 @@
             $("valueWiseTpl").textContent,
             "text/html",
           );
+          const currentDate = doc.querySelector(".current-date");
+          if (currentDate) currentDate.textContent = todayDMY();
           const tbody = doc.querySelector("table.data-table tbody");
           const totalRow = tbody.querySelector("tr.total-row");
           const blanks = Array.from(tbody.querySelectorAll("tr")).filter(
@@ -10424,6 +10936,30 @@
           updateReportTitle();
           generateReport();
         };
+        window.addEventListener("message", (event) => {
+          if (
+            event.data?.type !== "it-expiry-entry-posted" ||
+            !isIT() ||
+            !reportDlg.open
+          )
+            return;
+          if (
+            Array.isArray(itHistoricalSearchResults) &&
+            Array.isArray(event.data.paths)
+          ) {
+            const postedPaths = new Set(event.data.paths);
+            itHistoricalSearchResults.forEach(({ date, docs }) => {
+              docs.forEach(({ id, data }) => {
+                if (postedPaths.has(expiryPath(date) + "/" + id))
+                  data.posted = true;
+              });
+            });
+            generateReport(true);
+            return;
+          }
+          reportCache = null;
+          generateReport(false);
+        });
         // Area বদলালে Territory তালিকা নতুন করে সাজাতে হবে
         $("rdArea").onchange = () => {
           $("rdTerr").value = "";
@@ -10530,6 +11066,10 @@
             const sp = new URLSearchParams();
             sp.set("summaryPrint", "1");
             sp.set("entries", JSON.stringify([{ date: isoDateStr(date), key }]));
+            if (isIT()) {
+              sp.set("itReportReturn", "1");
+              sp.set("itView", "1");
+            }
             summaryUrl.hash = sp.toString();
             openInApp(summaryUrl.href);
             return;
@@ -10544,10 +11084,32 @@
           url.hash = vp.toString();
           openInApp(url.href);
         }
+        function openItSummary(entries, flow) {
+          const selected = entries.map(({ date, key }) => ({
+            date: isoDateStr(date),
+            key,
+          }));
+          try {
+            sessionStorage.setItem(
+              "summaryPrintEntries",
+              JSON.stringify(selected),
+            );
+          } catch (error) {}
+          const url = new URL(location.href);
+          url.search = "";
+          const sp = new URLSearchParams();
+          sp.set("summaryPrint", "1");
+          sp.set("entries", JSON.stringify(selected));
+          sp.set("itReportReturn", "1");
+          sp.set(flow === "post" ? "itPost" : "itView", "1");
+          url.hash = sp.toString();
+          openInApp(url.href);
+        }
         $("rdPrintAll").onclick = () => {
           if (!lastReportEntries.length) return;
           if (needAmSignature(() => $("rdPrintAll").onclick())) return;
           const storeReportReturn = isStoreStaff();
+          const itReportReturn = isIT();
           const checkedIdx = Array.from(
             document.querySelectorAll("#rdRows .rd-row-check"),
           )
@@ -10592,6 +11154,8 @@
             pp.set("storeReportReturn", "1");
           if (reportMode !== "summary" && isDepotManager())
             pp.set("dmReportReturn", "1");
+          if (reportMode === "summary" && itReportReturn)
+            pp.set("itReportReturn", "1");
           url.hash = pp.toString();
           openInApp(url.href);
         };
@@ -10608,7 +11172,8 @@
           const p = __pageParams();
           if (
             p.get("storeReportReturn") === "1" ||
-            p.get("dmReportReturn") === "1"
+            p.get("dmReportReturn") === "1" ||
+            p.get("itReportReturn") === "1"
           ) {
             if (window.opener && !window.opener.closed) {
               window.opener.focus();
@@ -11072,10 +11637,7 @@
         window.addEventListener("resize", placePanels);
 
         let lookupRun = null,
-          lookupTimerActive = false,
-          roleLookupPending = false,
-          roleLookupProceedPending = false,
-          activeLookupShouldProceed = false;
+          lookupTimerActive = false;
         let allCache = null,
           seq = 0,
           timer = null,
@@ -11133,6 +11695,14 @@
             selfInfo().officeStaffRole === "STORE"
           );
         }
+        function isIT() {
+          return (
+            !isAdmin &&
+            selfInfo().officeStaff === true &&
+            selfInfo().officeStaffRole === "IT" &&
+            IT_IPIS.has(norm(selfInfo().ipi || selfIpi()))
+          );
+        }
         function isSupervisor() {
           return isAreaManager() || isRsm() || isDepotManager();
         }
@@ -11151,6 +11721,7 @@
         function roleLabel() {
           if (isAdmin) return adminViewAs;
           if (isStoreStaff()) return "STORE";
+          if (isIT()) return "IT";
           if (isDepotManager()) return "DEPOT MANAGER";
           if (isRsm())
             return /^zone/i.test(selfInfo().team || "") ? "ZONE" : "REGION";
@@ -12415,36 +12986,32 @@
         }
         const OFFICE_STAFF_PATH = "DINAJPUR/Office_Staff";
         async function findOfficeStaff(ipi) {
-          try {
-            const q =
-              "?orderBy=" +
-              encodeURIComponent('"$key"') +
-              "&startAt=" +
-              encodeURIComponent('"' + ipi + '"') +
-              "&endAt=" +
-              encodeURIComponent('"' + ipi + '\uf8ff"');
-            const data = await getJSON(
-              FB_DB + "/" + OFFICE_STAFF_PATH + ".json" + q,
-            );
-            const key = Object.keys(data || {}).find(
-              (k) => k === ipi || k.startsWith(ipi + "_"),
-            );
-            const o = key && data[key];
-            if (!o || typeof o !== "object") return null;
-            const recIpi = norm(pickAny(o, ["IPINO", "IPI NO"]) || ipi);
-            if (recIpi !== ipi) return null;
-            return {
-              "IPI NO": recIpi,
-              NAME:
-                pickAny(o, ["NAMEOFEMPLOYEE", "NAME OF EMPLOYEE", "NAME"]) ||
-                key.slice(ipi.length + 1),
-              DESIGNATION: pickAny(o, ["DESIGNATION"]),
-              TEAM: "",
-              _officeStaff: true,
-            };
-          } catch (e) {
-            return null;
-          }
+          const q =
+            "?orderBy=" +
+            encodeURIComponent('"$key"') +
+            "&startAt=" +
+            encodeURIComponent('"' + ipi + '"') +
+            "&endAt=" +
+            encodeURIComponent('"' + ipi + '\uf8ff"');
+          const data = await getJSON(
+            FB_DB + "/" + OFFICE_STAFF_PATH + ".json" + q,
+          );
+          const key = Object.keys(data || {}).find(
+            (k) => k === ipi || k.startsWith(ipi + "_"),
+          );
+          const o = key && data[key];
+          if (!o || typeof o !== "object") return null;
+          const recIpi = norm(pickAny(o, ["IPINO", "IPI NO"]) || ipi);
+          if (recIpi !== ipi) return null;
+          return {
+            "IPI NO": recIpi,
+            NAME:
+              pickAny(o, ["NAMEOFEMPLOYEE", "NAME OF EMPLOYEE", "NAME"]) ||
+              key.slice(ipi.length + 1),
+            DESIGNATION: pickAny(o, ["DESIGNATION"]),
+            TEAM: "",
+            _officeStaff: true,
+          };
         }
 
         // Admin ও সাধারণ কর্মীর credential একই নোডে থাকে, তাই এক request-এই দুটো বের হয়।
@@ -12458,28 +13025,24 @@
             encodeURIComponent('"' + ipi + '"') +
             "&endAt=" +
             encodeURIComponent('"' + ipi + '\uf8ff"');
-          try {
-            const data = await getJSON(base + q);
-            const keys = Object.keys(data || {}).filter(
-              (key) => key === ipi || key.startsWith(ipi + "_"),
-            );
-            const passwordRecord = keys.length ? data[keys[0]] : null;
-            const adminKey = keys.find((key) => {
-              const rec = data[key];
-              const des = String(
-                (rec && (rec.DESIGNATION || rec.Designation)) || "",
-              )
-                .trim()
-                .toUpperCase();
-              return des !== "MPO";
-            });
-            return {
-              adminRecord: adminKey ? data[adminKey] : null,
-              passwordRecord,
-            };
-          } catch (e) {
-            return { adminRecord: null, passwordRecord: null };
-          }
+          const data = await getJSON(base + q);
+          const keys = Object.keys(data || {}).filter(
+            (key) => key === ipi || key.startsWith(ipi + "_"),
+          );
+          const passwordRecord = keys.length ? data[keys[0]] : null;
+          const adminKey = keys.find((key) => {
+            const rec = data[key];
+            const des = String(
+              (rec && (rec.DESIGNATION || rec.Designation)) || "",
+            )
+              .trim()
+              .toUpperCase();
+            return des !== "MPO";
+          });
+          return {
+            adminRecord: adminKey ? data[adminKey] : null,
+            passwordRecord,
+          };
         }
         // পাসওয়ার্ড ঘর দেখানো/লুকানো (Admin মোড ছাড়া সাধারণ কর্মীর জন্য)
         function setPassRow(on) {
@@ -12506,6 +13069,7 @@
           }
         }
         async function lookupCore() {
+          if (!validateLookupPrerequisites()) return;
           const raw = $("de_ipi").value.trim();
           const selectedRole = $("employeeRoleSelect").value;
           const mine = ++seq;
@@ -12525,8 +13089,68 @@
           const ipi = norm(raw);
           lastLookedIpi = ipi;
           setSt("load", "খোঁজা হচ্ছে…");
+          if (selectedRole === "IT") {
+            if (!IT_IPIS.has(ipi)) {
+              dropAuto();
+              setSt("err", "এই IPI নম্বরটি IT লগইনের জন্য অনুমোদিত নয়।");
+              return;
+            }
+            try {
+              const [{ passwordRecord }, officeStaff] = await Promise.all([
+                findCredentialRecords(ipi),
+                findOfficeStaff(ipi),
+              ]);
+              if (mine !== seq) return;
+              if (!officeStaff) {
+                dropAuto();
+                setSt(
+                  "err",
+                  "এই IPI নম্বরটি Office_Staff তালিকায় পাওয়া যায়নি।",
+                );
+                return;
+              }
+              setAdminMode(false, null, true);
+              $("de_ipi").value = ipi;
+              $("de_mpo").value = pick(officeStaff, "NAME") || "IT";
+              $("mpoLabel").textContent = "IT User";
+              $("ipiSearchBtn").title = "IT লগইন";
+              $("ipiSearchBtn").setAttribute("aria-label", "IT লগইন");
+              autoName = $("de_mpo").value;
+              currentEmployeeInfo = {
+                ipi,
+                mpoName: $("de_mpo").value,
+                designation: pick(officeStaff, "DESIGNATION"),
+                team: "",
+                officeStaff: true,
+                officeStaffRole: "IT",
+              };
+              pendingPassRecord = passwordRecord;
+              setPassRow(true);
+              if (!String(pick(passwordRecord, "PASSWORD") || "").trim()) {
+                setSt(
+                  "err",
+                  "IT লগইনের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
+                );
+                return;
+              }
+              setSt("ok", "");
+            } catch (error) {
+              if (mine !== seq) return;
+              setSt(
+                "err",
+                error.code === "perm"
+                  ? "IT তথ্য পড়ার অনুমতি নেই (Firebase Rules-এ read চালু করতে হবে)।"
+                  : "IT তথ্য যাচাই করা যায়নি (ইন্টারনেট/সার্ভার সমস্যা)।",
+              );
+            }
+            return;
+          }
           try {
             const credentialsPromise = findCredentialRecords(ipi);
+            const officeStaffPromise =
+              selectedRole === "STORE"
+                ? findOfficeStaff(ipi)
+                : Promise.resolve(null);
             let employeePromise =
               selectedRole === "ADMIN_FIELD_FORCE" || selectedRole === "STORE"
                 ? null
@@ -12534,10 +13158,14 @@
                     (rec) => ({ rec }),
                     (error) => ({ error }),
                   );
+            const [credentialRecords, storeOfficeStaff] = await Promise.all([
+              credentialsPromise,
+              officeStaffPromise,
+            ]);
             const {
               adminRecord: credentialAdminRecord,
               passwordRecord: passRec,
-            } = await credentialsPromise;
+            } = credentialRecords;
             if (mine !== seq) return;
             const adminRec =
               selectedRole === "ADMIN_FIELD_FORCE"
@@ -12562,10 +13190,27 @@
               setPassRow(true);
               if (!STORE_IPIS.has(ipi)) {
                 setSt("err", "এই IPI নম্বরটি STORE যাচাইয়ের জন্য অনুমোদিত নয়।");
-              } else if (!String(pick(passRec, "PASSWORD") || "").trim()) {
+                return;
+              }
+              if (!storeOfficeStaff) {
                 setSt(
                   "err",
-                  "STORE যাচাইয়ের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
+                  "এই IPI নম্বরটি Office_Staff তালিকায় পাওয়া যায়নি।",
+                );
+                return;
+              }
+              currentEmployeeInfo = {
+                ipi,
+                mpoName: pick(storeOfficeStaff, "NAME") || "STORE",
+                designation: pick(storeOfficeStaff, "DESIGNATION") || "STORE",
+                team: "",
+                officeStaff: true,
+                officeStaffRole: "STORE",
+              };
+              if (!String(pick(passRec, "PASSWORD") || "").trim()) {
+                setSt(
+                  "err",
+                  "STORE লগইনের জন্য Emp_Password-এ পাসওয়ার্ড পাওয়া যায়নি।",
                 );
               } else {
                 setSt("ok", "");
@@ -12669,7 +13314,12 @@
           } catch (e) {
             if (mine !== seq) return;
             dropAuto();
-            if (e.code === "perm")
+            if (e.code === "perm" && selectedRole === "STORE")
+              setSt(
+                "err",
+                "STORE-এর Office_Staff বা Emp_Password তথ্য পড়ার অনুমতি নেই (Firebase Rules-এ read চালু করতে হবে)।",
+              );
+            else if (e.code === "perm")
               setSt(
                 "err",
                 "ডাটাবেস পড়ার অনুমতি নেই (Firebase Rules-এ read চালু করতে হবে)। নাম নিজে লিখুন।",
@@ -13072,7 +13722,6 @@
         $("de_ipi").addEventListener("input", () => {
           clearTimeout(timer);
           lookupTimerActive = false;
-          roleLookupPending = false;
           seq += 1;
           currentEmployeeInfo = {};
           currentTerritoryCode = "";
@@ -13082,6 +13731,13 @@
           lastLookedIpi = "";
           setAdminMode(false);
           setPassRow(false);
+          const itSelected = $("employeeRoleSelect").value === "IT";
+          $("adminPassRow").hidden = false;
+          $("ipiSearchBtn").title = itSelected ? "IT লগইন" : "খুঁজুন";
+          $("ipiSearchBtn").setAttribute(
+            "aria-label",
+            itSelected ? "IT লগইন" : "IPI ও পাসওয়ার্ড দিয়ে প্রবেশ",
+          );
           dropAuto();
           st.className = "ipiStatus";
           st.textContent = "";
@@ -13099,25 +13755,36 @@
           lastLookedIpi = "";
           setAdminMode(false);
           setPassRow(false);
+          const itSelected = $("employeeRoleSelect").value === "IT";
+          $("adminPassRow").hidden = false;
+          $("ipiSearchBtn").title = itSelected ? "IT লগইন" : "খুঁজুন";
+          $("ipiSearchBtn").setAttribute(
+            "aria-label",
+            itSelected ? "IT লগইন" : "IPI ও পাসওয়ার্ড দিয়ে প্রবেশ",
+          );
           dropAuto();
           st.className = "ipiStatus";
           st.textContent = "";
-          const ipiSearchButton = $("ipiSearchBtn");
-          if ($("de_ipi").value.trim().length >= 3) {
-            if (ipiSearchButton.disabled) {
-              roleLookupPending = true;
-              roleLookupProceedPending = activeLookupShouldProceed;
-            } else {
-              runIpiSearch(false);
-            }
-          }
         });
-        function runIpiSearch(proceedToForm) {
-          if (!$("employeeRoleSelect").value) {
+        function validateLookupPrerequisites() {
+          const role = $("employeeRoleSelect").value;
+          if (!role) {
             setSt("err", "আগে dropdown থেকে কর্মীর ধরন নির্বাচন করুন।");
             $("employeeRoleSelect").focus();
-            return;
+            return false;
           }
+          if (
+            (role === "IT" || role === "STORE") &&
+            !$("de_adminPass").value.trim()
+          ) {
+            setSt("err", "খোঁজার আগে পাসওয়ার্ড দিন।");
+            $("de_adminPass").focus();
+            return false;
+          }
+          return true;
+        }
+        function runIpiSearch(proceedToForm) {
+          if (!validateLookupPrerequisites()) return;
           if (!$("de_ipi").value.trim()) {
             $("de_ipi").focus();
             return;
@@ -13138,7 +13805,6 @@
           busy.hidden = false;
           btn.classList.add("loading");
           btn.disabled = true;
-          activeLookupShouldProceed = proceedToForm;
           lookupRun = lookup();
           Promise.resolve(lookupRun)
             .catch(() => {})
@@ -13146,13 +13812,6 @@
               busy.hidden = true;
               btn.classList.remove("loading");
               btn.disabled = false;
-              if (roleLookupPending) {
-                roleLookupPending = false;
-                const shouldProceed = roleLookupProceedPending;
-                roleLookupProceedPending = false;
-                runIpiSearch(shouldProceed);
-                return;
-              }
               if (proceedToForm) tryEmployeeOk();
             });
         }
@@ -13175,7 +13834,7 @@
             return;
           }
           if (e.target.id === "de_ipi") {
-            $("ipiSearchBtn").click();
+            $("de_adminPass").focus();
             return;
           }
           const all = Array.from(dlg.querySelectorAll("input[type=text]"));
@@ -13336,6 +13995,11 @@
           document.title = "Summary";
           setTabLogo();
           showPage("none");
+          const itPostFlow = viewParams.get("itPost") === "1";
+          const itViewFlow = viewParams.get("itView") === "1";
+          if (itViewFlow) document.body.classList.add("it-view-only");
+          if (viewParams.get("itReportReturn") === "1")
+            enableReportReturn("Back");
           (async () => {
             let entries = [];
             try {
@@ -13392,7 +14056,7 @@
             // allPrint ব্লকের মতোই, এখানেও পেজগুলো appendChild-এর পরে আবার
             // fitPagesToScreen() চালাতে হচ্ছে।
             if (window.fitPagesToScreen) window.fitPagesToScreen();
-            $("viewFormPrint").hidden = false;
+            $("viewFormPrint").hidden = itPostFlow || itViewFlow;
             $("backToReport").hidden = true;
             const postBtn = $("summaryPostBtn");
             const postStatus = $("summaryPostStatus");
@@ -13400,9 +14064,25 @@
             if (alreadyPosted) {
               postStatus.textContent = "এই এন্ট্রিগুলো আগেই Post করা হয়েছে।";
             }
+            if (itViewFlow) {
+              postBtn.hidden = true;
+              return;
+            }
+            if (viewParams.get("itReportReturn") === "1" && !itPostFlow) {
+              postBtn.hidden = true;
+              return;
+            }
             postBtn.hidden = false;
-            postBtn.disabled = alreadyPosted;
-            postBtn.textContent = alreadyPosted ? "Posted" : "Post";
+            postBtn.disabled = alreadyPosted && !itPostFlow;
+            postBtn.textContent = alreadyPosted
+              ? itPostFlow
+                ? "Print"
+                : "Posted"
+              : "Post";
+            if (itPostFlow && alreadyPosted) {
+              postBtn.onclick = () => window.print();
+              return;
+            }
             postBtn.onclick = async () => {
               postBtn.disabled = true;
               postStatus.style.color = "#1a3f7a";
@@ -13414,6 +14094,7 @@
                   await firestoreSetDoc(ref.path, {
                     ...(ref.entry._sourceData || ref.entry),
                     posted: true,
+                    postedByRole: "IT",
                     postedAt: new Date().toISOString(),
                   });
                 } catch (error) {
@@ -13430,8 +14111,28 @@
                 postStatus.style.color = "#1a3f7a";
                 postStatus.textContent =
                   "Post সম্পন্ন — এগুলো এখন থেকে Summary টেবিলে আর দেখাবে না।";
-                postBtn.textContent = "Posted";
-                postBtn.disabled = true;
+                if (itPostFlow) {
+                  postRefs.forEach((ref) => {
+                    ref.entry.posted = true;
+                  });
+                  postBtn.textContent = "Print";
+                  postBtn.disabled = false;
+                  postBtn.onclick = () => window.print();
+                  if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage(
+                      {
+                        type: "it-expiry-entry-posted",
+                        paths: postRefs.map((ref) =>
+                          ref.path.split("/documents/").pop(),
+                        ),
+                      },
+                      location.origin === "null" ? "*" : location.origin,
+                    );
+                  }
+                } else {
+                  postBtn.textContent = "Posted";
+                  postBtn.disabled = true;
+                }
               }
             };
           })();
@@ -13450,11 +14151,21 @@
         const savedEmp = loadEmployee();
         const savedRole = savedEmp && savedEmp.lookupRole;
         const needsFreshStoreVerification = savedRole === "STORE";
-        const hasEmp = !!(savedEmp && savedEmp.ipi) && !needsFreshStoreVerification;
+        const needsFreshItVerification = savedRole === "IT";
+        const validSavedIt =
+          savedRole !== "IT" || IT_IPIS.has(norm(savedEmp.ipi));
+        const hasEmp =
+          !!(savedEmp && savedEmp.ipi) &&
+          !needsFreshStoreVerification &&
+          !needsFreshItVerification &&
+          validSavedIt;
         let startSupervisor = false;
         if (needsFreshStoreVerification) {
           $("employeeRoleSelect").value = "STORE";
-          setSt("load", "STORE যাচাই করতে IPI ও পাসওয়ার্ড দিন।");
+          setSt("load", "STORE যাচাই করতে IPI, Office_Staff এবং পাসওয়ার্ড দিন।");
+        }
+        if (needsFreshItVerification) {
+          $("employeeRoleSelect").value = "";
         }
         if (hasEmp) {
           const savedAm = savedEmp.am || savedEmp.employeeInfo?.amName || "";
@@ -13479,32 +14190,36 @@
               savedEmp.employeeInfo?.amIpi ||
               (hasLegacyAmFormat ? savedAm.slice(0, savedAmSeparator) : ""),
           };
+          if (savedRole === "IT") {
+            currentEmployeeInfo = {
+              ipi: norm(savedEmp.ipi),
+              mpoName: "IT",
+              designation: "IT",
+              team: "",
+              officeStaff: true,
+              officeStaffRole: "IT",
+            };
+            $("de_mpo").value = "IT";
+          }
           updateTerritoryFields();
           autoName = savedEmp.mpo || "";
           isAdmin = !!savedEmp.isAdmin;
           syncChemistCodeLock();
           // Supervisor (AM/ZM/RSM/DM)-এর নিজের টেরিটরি না-ও থাকতে পারে; lookup()
           // চললে currentEmployeeInfo মুছে যায়, তাই আগেই দেখে নেওয়া হয়
-          startSupervisor = !isAdmin && isSupervisor();
+          startSupervisor = !isAdmin && (isSupervisor() || isIT());
           showChemistSection();
           if (currentTerritoryCode) {
             ensureChemistList(currentTerritoryCode).catch((error) =>
               setSt("err", chemistLoadErrorText(error)),
             );
           }
-          if (
-            !currentEmployeeInfo.ipi ||
-            (!currentTerritoryCode &&
-              !currentEmployeeInfo.officeStaff &&
-              !startSupervisor)
-          )
-            lookup();
         } else {
           showEmployeeSection();
         }
 
         if (startSupervisor) {
-          // AM / ZM / RSM / DM: সরাসরি Report ডায়ালগ
+          // AM / ZM / RSM / DM / IT: সরাসরি Report ডায়ালগ
           openReportDialogSafe();
         } else {
           dlg.showModal();
