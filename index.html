@@ -6369,16 +6369,16 @@
         })();
 
         // ---- Summary Form শুধু: Batch No./Date of Mfg./Date of Exp কলাম সরিয়ে
-        // তার জায়গায় "Per Pc" (প্রতি পিসের দাম), "Box" ও "Loose" (Quantity ও
-        // Box Size থেকে হিসাব করা বক্স-সংখ্যা ও অবশিষ্ট লুজ পিস) কলাম বসানো
-        // হলো। savedForm/mainForm অপরিবর্তিত থাকে। ----
+        // তার জায়গায় "Box", "Loose" ও "Per Pc" (প্রতি পিসের দাম) কলাম বসানো
+        // হলো। Box ও Loose Quantity এবং Box Size থেকে হিসাব হয়।
+        // savedForm/mainForm অপরিবর্তিত থাকে। ----
         (function () {
           const colgroup = summaryForm.querySelector("colgroup");
           const batchCol = colgroup.querySelector("col.c-batch");
           const mfgCol = colgroup.querySelector("col.c-mfg");
           const expCol = colgroup.querySelector("col.c-exp");
           const colFrag = document.createDocumentFragment();
-          ["c-ppc", "c-box", "c-loose"].forEach((cls) => {
+          ["c-box", "c-loose", "c-ppc"].forEach((cls) => {
             const col = document.createElement("col");
             col.className = cls;
             colFrag.appendChild(col);
@@ -6393,7 +6393,7 @@
             mfgTh = ths[4],
             expTh = ths[5];
           const thFrag = document.createDocumentFragment();
-          ["Per Pcs", "Box", "Loose"].forEach((label) => {
+          ["Box", "Loose", "Per Pcs"].forEach((label) => {
             const th = document.createElement("th");
             th.textContent = label;
             thFrag.appendChild(th);
@@ -6409,9 +6409,9 @@
               expTd = tds[5];
             const tdFrag = document.createDocumentFragment();
             [
-              ["Per Pcs", "ppc"],
               ["Box", "box"],
               ["Loose", "loose"],
+              ["Per Pcs", "ppc"],
             ].forEach(([label]) => {
               const td = document.createElement("td");
               td.innerHTML =
@@ -7576,7 +7576,20 @@
         // savedPages/savedPageCount-কে একদমই স্পর্শ করে না, তাই এটার ভবিষ্যৎ
         // পরিবর্তন উপরের সেভ ফরমকে প্রভাবিত করবে না।
         function populateSummaryForm(data) {
-          const total = (data.rows && data.rows.length) || 0;
+          const rows = (data.rows || [])
+            .map((row, index) => {
+              const qty = Number((row[4] || "").toString().trim());
+              const boxSize = Number((row[6] || "").toString().trim());
+              const boxCount =
+                Number.isFinite(qty) &&
+                Number.isFinite(boxSize) &&
+                boxSize > 0
+                  ? Math.floor(qty / boxSize)
+                  : 0;
+              return { row, index, hasBox: boxCount > 0 };
+            })
+            .sort((a, b) => Number(b.hasBox) - Number(a.hasBox));
+          const total = rows.length;
           const n = Math.max(1, Math.ceil(total / ROWS));
           ensureSummaryPages(n);
           summaryPageCount = n;
@@ -7608,14 +7621,15 @@
             Array.from(pg.tbody.children).forEach((tr, i) => {
               if (tr.classList.contains("total-row")) return;
               const idx = p * ROWS + i;
+              const item = rows[idx];
               tr.querySelector("td").textContent = idx + 1;
               const inputs = tr.querySelectorAll("input");
-              const r = (data.rows && data.rows[idx]) || [];
-              // Summary Form শুধু: কলাম এখন Code, Name, Per Pc, Box, Loose,
+              const r = item ? item.row : [];
+              // Summary Form শুধু: কলাম এখন Code, Name, Box, Loose, Per Pc,
               // Quantity, Invoice Value — এই ক্রমে সাজানো।
               // r[] গঠন (collectEntry অনুযায়ী): 0 name, 1 batch, 2 mfg,
               // 3 exp, 4 qty, 5 invoice, 6 box size, 7 pack size, 8 per pcs
-              const code = (data.codes && data.codes[idx]) || "";
+              const code = (data.codes && item && data.codes[item.index]) || "";
               let perPc = "",
                 boxCount = "",
                 looseCount = "";
@@ -7636,7 +7650,7 @@
                 }
               }
               const rowVals = r.length
-                ? [code, r[0], perPc, boxCount, looseCount, r[4], r[5]]
+                ? [code, r[0], boxCount, looseCount, perPc, r[4], r[5]]
                 : [];
               inputs.forEach((inp, j) => {
                 inp.value = rowVals[j] || "";
