@@ -185,17 +185,34 @@
         display: inline-block;
         min-width: 100px;
       }
-      .print-button {
-        display: block;
-        width: fit-content;
+      .form-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
         margin: 6px auto 4px;
+      }
+      .form-actions button {
         padding: 9px 16px;
         border: 0;
         border-radius: 4px;
-        background: #1769aa;
         color: #fff;
         font: inherit;
         cursor: pointer;
+      }
+      .print-button {
+        background: #1769aa;
+      }
+      .save-button {
+        background: #27803a;
+      }
+      .clear-button {
+        background: #b42318;
+      }
+      .action-status {
+        width: 100%;
+        text-align: center;
       }
 
       @media print {
@@ -220,9 +237,18 @@
     </style>
   </head>
   <body>
-    <button class="print-button no-print" type="button" onclick="window.print()">
-      প্রিন্ট করুন
-    </button>
+    <div class="form-actions no-print">
+      <button class="print-button" type="button" onclick="window.print()">
+        প্রিন্ট করুন
+      </button>
+      <button id="save-form-button" class="save-button" type="button">
+        সেভ
+      </button>
+      <button id="clear-form-button" class="clear-button" type="button">
+        ক্লিয়ার
+      </button>
+      <span id="action-status" class="action-status" role="status"></span>
+    </div>
     <div class="page-container">
       <div class="header">
         <img
@@ -554,7 +580,29 @@
         />
       </div>
     </div>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyC7-T51lm7PJi4TSS3AAVTyWEQqpEQkcpc",
+        authDomain: "dinajpur-expiry.firebaseapp.com",
+        databaseURL:
+          "https://dinajpur-expiry-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "dinajpur-expiry",
+        storageBucket: "dinajpur-expiry.firebasestorage.app",
+        messagingSenderId: "317163906593",
+        appId: "1:317163906593:web:3d6f963d3cd23eed4de560",
+        measurementId: "G-DT0L6SZKK0",
+      };
+      const getFirestore = () => {
+        if (!window.firebase) {
+          throw new Error("Firebase SDK লোড হয়নি।");
+        }
+        const app = firebase.apps.length
+          ? firebase.app()
+          : firebase.initializeApp(firebaseConfig);
+        return firebase.firestore(app);
+      };
       let numberLocale = "bn-BD";
       const dateFormatter = () =>
         new Intl.DateTimeFormat(numberLocale === "bn-BD" ? "bn-BD" : "en-GB", {
@@ -566,7 +614,6 @@
         document.getElementById("current-date").textContent =
           dateFormatter().format(new Date());
       };
-      updateDate();
 
       document
         .querySelectorAll(".data-table tbody tr:not(.total-row)")
@@ -657,18 +704,202 @@
           pharmacyCount ? numberFormatter.format(pharmacyCount) : "";
       };
 
-      document.querySelector(".data-table tbody").addEventListener("input", (event) => {
-        if (event.target.matches('td[contenteditable="true"]')) {
-          const inputText = event.target.textContent.trim();
-          if (inputText) {
-            numberLocale = /[\u0980-\u09FF]/.test(inputText)
-              ? "bn-BD"
-              : "en-US";
-            updateDate();
+      const tableBody = document.querySelector(".data-table tbody");
+      const storageKey = "value-wise-summary-form";
+      const getEditableCells = () =>
+        [...tableBody.querySelectorAll('td[contenteditable="true"]')];
+      const saveForm = () => {
+        try {
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+              values: getEditableCells().map((cell) => cell.textContent),
+              numberLocale,
+            }),
+          );
+          return true;
+        } catch (error) {
+          console.error("ফর্মের তথ্য ব্রাউজারে সংরক্ষণ করা যায়নি।", error);
+          return false;
+        }
+      };
+      const clearForm = () => {
+        localStorage.removeItem(storageKey);
+        getEditableCells().forEach((cell) => {
+          cell.textContent = "";
+        });
+        numberLocale = "bn-BD";
+        updateDate();
+        updateAmounts();
+      };
+      const saveSummaryToFirestore = async () => {
+        const firestore = getFirestore();
+        const now = new Date();
+        const dateKey = [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, "0"),
+          String(now.getDate()).padStart(2, "0"),
+        ].join("-");
+        const monthDocumentId = `${new Intl.DateTimeFormat("en-US", {
+          month: "short",
+        }).format(now)}-${now.getFullYear()}`;
+        const rows = [
+          ...tableBody.querySelectorAll("tr:not(.total-row)"),
+        ].map((row) => {
+          const cells = row.querySelectorAll("td");
+          return {
+            serial: cells[0].textContent.trim(),
+            pharmacyName: cells[1].textContent.trim(),
+            pharmacyCode: cells[2].textContent.trim(),
+            amountA: cells[3].textContent.trim(),
+            discountPercent: cells[4].textContent.trim(),
+            amountB: cells[5].textContent.trim(),
+            netAmount: cells[6].textContent.trim(),
+          };
+        }).filter((row) =>
+          row.pharmacyName ||
+          row.pharmacyCode ||
+          row.amountA ||
+          row.discountPercent ||
+          row.amountB
+        );
+        const totalCells = document.querySelectorAll(
+          ".data-table tbody .total-row td",
+        );
+
+        await firestore
+          .collection("Dinajpur")
+          .doc(monthDocumentId)
+          .collection("SUMMARY")
+          .doc(dateKey)
+          .set(
+            {
+              invoiceNo: dateKey,
+              date: dateKey,
+              month: monthDocumentId,
+              numberLocale,
+              rows,
+              totals: {
+                pharmacyCount: document.getElementById("pharmacy-count").value,
+                amountA: totalCells[1].textContent.trim(),
+                amountB: totalCells[3].textContent.trim(),
+                netAmount: document.getElementById("net-total-amount").value,
+              },
+              savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+      };
+      const restoreForm = () => {
+        try {
+          const saved = localStorage.getItem(storageKey);
+          if (!saved) return;
+
+          const formData = JSON.parse(saved);
+          if (
+            !formData ||
+            !Array.isArray(formData.values) ||
+            !formData.values.every((value) => typeof value === "string")
+          ) {
+            console.error("সংরক্ষিত ফর্মের তথ্য সঠিক ফরম্যাটে নেই।");
+            return;
           }
-          updateAmounts();
+
+          getEditableCells().forEach((cell, index) => {
+            cell.textContent = formData.values[index] ?? "";
+          });
+          if (formData.numberLocale === "bn-BD" || formData.numberLocale === "en-US") {
+            numberLocale = formData.numberLocale;
+          }
+        } catch (error) {
+          console.error("সংরক্ষিত ফর্মের তথ্য পড়া যায়নি।", error);
+        }
+      };
+      let composingCell = null;
+      const refreshFromCell = (cell) => {
+        const inputText = cell.textContent.trim();
+        if (inputText) {
+          numberLocale = /[\u0980-\u09FF]/.test(inputText)
+            ? "bn-BD"
+            : "en-US";
+          updateDate();
+        }
+        updateAmounts();
+      };
+
+      restoreForm();
+      updateDate();
+      tableBody.addEventListener("compositionstart", (event) => {
+        if (event.target.matches('td[contenteditable="true"]')) {
+          composingCell = event.target;
         }
       });
+      tableBody.addEventListener("compositionend", (event) => {
+        if (event.target === composingCell) {
+          composingCell = null;
+          refreshFromCell(event.target);
+          saveForm();
+        }
+      });
+      tableBody.addEventListener("input", (event) => {
+        if (event.target.matches('td[contenteditable="true"]')) {
+          if (!event.isComposing && event.target !== composingCell) {
+            refreshFromCell(event.target);
+          }
+          saveForm();
+        }
+      });
+      const actionStatus = document.getElementById("action-status");
+      document
+        .getElementById("save-form-button")
+        .addEventListener("click", async (event) => {
+          const saveButton = event.currentTarget;
+          saveButton.disabled = true;
+          actionStatus.textContent = "Firestore-এ সংরক্ষণ হচ্ছে...";
+          saveForm();
+
+          try {
+            await saveSummaryToFirestore();
+          } catch (error) {
+            console.error("Firestore-এ SUMMARY- ডকুমেন্ট সংরক্ষণ করা যায়নি।", error);
+            const errorCode =
+              error && typeof error.code === "string"
+                ? error.code
+                : "unknown";
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            actionStatus.textContent = `Firestore-এ সেভ হয়নি (${errorCode}): ${errorMessage}`;
+            saveButton.disabled = false;
+            return;
+          }
+
+          try {
+            clearForm();
+            actionStatus.textContent =
+              "Firestore-এ সেভ হয়েছে, ফর্ম ক্লিয়ার করা হয়েছে";
+          } catch (error) {
+            console.error("সেভ করা ফর্মের স্থানীয় তথ্য মুছে ফেলা যায়নি।", error);
+            actionStatus.textContent =
+              "Firestore-এ সেভ হয়েছে, তবে স্থানীয় তথ্য ক্লিয়ার করা যায়নি";
+          } finally {
+            saveButton.disabled = false;
+          }
+        });
+      document
+        .getElementById("clear-form-button")
+        .addEventListener("click", () => {
+          if (!window.confirm("ফর্মের সব তথ্য মুছে ফেলতে চান?")) return;
+
+          try {
+            clearForm();
+          } catch (error) {
+            console.error("সংরক্ষিত ফর্মের তথ্য মুছে ফেলা যায়নি।", error);
+            actionStatus.textContent = "সংরক্ষিত তথ্য মুছে ফেলা যায়নি";
+            return;
+          }
+
+          actionStatus.textContent = "ফর্মের সব তথ্য মুছে ফেলা হয়েছে";
+        });
       updateAmounts();
     </script>
   </body>
