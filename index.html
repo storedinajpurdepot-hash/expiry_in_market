@@ -5748,6 +5748,9 @@
             <button type="button" id="rdYearBtn" title="Exp সাল বাছুন (একাধিক চেক দেওয়া যাবে)">Year: সব ▾</button>
             <div id="rdYearPanel" class="rd-year-panel" hidden></div>
           </div>
+          <button type="button" id="rdBlankSummaryBtn" hidden>
+            Blank Summary
+          </button>
           <button type="button" id="rdPostedBtn" hidden>Posted</button>
         </div>
         <div class="rd-filters" id="rdFilters" hidden>
@@ -9073,6 +9076,7 @@
           if (isItPanel()) $("rdSummaryBtn").hidden = true;
           $("rdPostedBtn").hidden = !(isAdmin && adminViewAs === "ADMIN");
           $("rdYearSel").hidden = !/^(ZONE|REGION)$/.test(roleLabel());
+          $("rdBlankSummaryBtn").hidden = roleLabel() !== "ZONE";
           updateReportTitle();
           // শুধু AM-এর জন্য New Entry বাটন; হোম স্ক্রিনে থাকলে Close বাটন নেই
           const home = isSupervisorHome();
@@ -10663,6 +10667,12 @@
             e.stopPropagation();
             panel.hidden = !panel.hidden;
           };
+          $("rdBlankSummaryBtn").onclick = () =>
+            window.open(
+              "https://storedinajpurdepot-hash.github.io/expiry_in_market/chemist%20summary.html",
+              "_blank",
+              "noopener,noreferrer",
+            );
           panel.addEventListener("click", (e) => e.stopPropagation());
           reportDlg.addEventListener("click", () => (panel.hidden = true));
         })();
@@ -11863,6 +11873,7 @@
             adminPanel || v === "ZONE" || v === "REGION"
           );
           $("rdYearSel").hidden = !(v === "ZONE" || v === "REGION");
+          $("rdBlankSummaryBtn").hidden = v !== "ZONE";
           $("rdPostedBtn").hidden = !adminPanel;
           const itPanel = v === "IT";
           $("itHistorySearch").hidden = !itPanel;
