@@ -3805,14 +3805,20 @@
         #reportDlg .rd-body {
           padding: 10px;
         }
+        #reportDlg .rd-head h2 {
+          white-space: nowrap;
+        }
         #reportDlg .rd-range {
+          flex-wrap: wrap;
+          align-items: flex-end;
           gap: 5px;
         }
         #reportDlg .rd-range .f {
           font-size: 10.5px;
         }
         #reportDlg .rd-field.rd-date-field {
-          width: 92px;
+          flex: 1 1 calc(50% - 3px);
+          width: auto;
         }
         .cdate-input {
           padding: 5px 20px 5px 5px;
@@ -4016,6 +4022,12 @@
         flex: 0 0 auto;
         width: 108px;
       }
+      @media (max-width: 720px) {
+        #reportDlg .rd-field.rd-date-field {
+          flex: 1 1 calc(50% - 3px);
+          width: auto;
+        }
+      }
       .cdate-input {
         width: 100%;
         min-width: 0;
@@ -4109,6 +4121,38 @@
         background: #1a3f7a;
         color: #fff;
         font-weight: 700;
+      }
+      @media screen and (max-width: 720px) {
+        .cdp-pop {
+          width: min(300px, calc(100vw - 24px));
+          padding: 12px;
+          font-size: 16px;
+        }
+        .cdp-head {
+          margin-bottom: 10px;
+        }
+        .cdp-nav {
+          width: 36px;
+          height: 36px;
+          font-size: 20px;
+        }
+        .cdp-grid {
+          gap: 4px;
+        }
+        .cdp-dow {
+          font-size: 13px;
+          padding-bottom: 5px;
+        }
+        .cdp-day {
+          min-height: 40px;
+          padding: 8px 0;
+          box-sizing: border-box;
+        }
+        .cdp-clear {
+          margin-top: 10px;
+          padding: 8px;
+          font-size: 15px;
+        }
       }
 
       /* ---- কাস্টম মেসেজ বক্স (alert/confirm-এর বদলে) ---- */
@@ -6092,16 +6136,18 @@
           function reposition() {
             if (!pop) return;
             const rect = input.getBoundingClientRect();
-            const popWidth = 200;
+            const popWidth = pop.getBoundingClientRect().width;
+            const popHeight = pop.getBoundingClientRect().height;
             let left = rect.left;
             if (left + popWidth > window.innerWidth - 8) {
               left = window.innerWidth - popWidth - 8;
             }
             if (left < 8) left = 8;
             let top = rect.bottom + 4;
-            if (top + 260 > window.innerHeight && rect.top > 260) {
-              top = rect.top - 264;
+            if (top + popHeight > window.innerHeight - 8) {
+              top = rect.top - popHeight - 4;
             }
+            if (top < 8) top = Math.max(8, window.innerHeight - popHeight - 8);
             pop.style.left = left + "px";
             pop.style.top = top + "px";
           }
