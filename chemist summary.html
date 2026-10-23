@@ -736,13 +736,13 @@
         const firestore = getFirestore();
         const now = new Date();
         const dateKey = [
-          now.getFullYear(),
-          String(now.getMonth() + 1).padStart(2, "0"),
           String(now.getDate()).padStart(2, "0"),
+          String(now.getMonth() + 1).padStart(2, "0"),
+          now.getFullYear(),
         ].join("-");
         const monthDocumentId = `${new Intl.DateTimeFormat("en-US", {
           month: "short",
-        }).format(now)}-${now.getFullYear()}`;
+        }).format(now).toUpperCase()}-${now.getFullYear()}`;
         const rows = [
           ...tableBody.querySelectorAll("tr:not(.total-row)"),
         ].map((row) => {
@@ -768,7 +768,7 @@
         );
 
         await firestore
-          .collection("Dinajpur")
+          .collection("CHEMIST WISE SUMMARY")
           .doc(monthDocumentId)
           .collection("SUMMARY")
           .doc(dateKey)
