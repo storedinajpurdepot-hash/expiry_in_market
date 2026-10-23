@@ -10164,6 +10164,7 @@
                 rowElement.classList.add("rd-dm-eligible");
               const checkCell = document.createElement("td");
               if (
+                isAdmin ||
                 itMode ||
                 (amMode && !entry.signatureAm) ||
                 (rsmMode && !entry.signatureRsm) ||
