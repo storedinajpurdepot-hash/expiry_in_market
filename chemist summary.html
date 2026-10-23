@@ -2,6 +2,7 @@
 <html lang="bn">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Format - II: Party Wise Value Summary (A4)</title>
     <style>
       @page {
@@ -43,8 +44,8 @@
         position: absolute;
         left: 5px;
         top: 0px;
-        width: 42px;
-        height: 42px;
+        width: 52px;
+        height: 52px;
       }
       .company-name {
         font-size: 17px;
@@ -172,13 +173,17 @@
       }
       .write-in-field {
         width: 160px;
-        padding: 0;
+        margin-left: 4px;
+        height: 1.8em;
+        padding: 2px 4px 0;
         border: 0;
         border-bottom: 1px dotted #000;
         background: transparent;
         color: inherit;
         font: inherit;
+        line-height: 1.5;
         outline: none;
+        text-align: left;
       }
       .dotted-line {
         border-bottom: 1px dotted #000;
@@ -210,9 +215,261 @@
       .clear-button {
         background: #b42318;
       }
-      .action-status {
-        width: 100%;
+      .load-button {
+        background: #6b4ca5;
+      }
+      .calendar-picker {
+        position: relative;
+      }
+      .form-actions .date-display {
+        padding: 8px;
+        border: 1px solid #888;
+        border-radius: 4px;
+        font: inherit;
+        background: #fff;
+        color: #000;
+        cursor: pointer;
+      }
+      .calendar-popup {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        z-index: 10;
+        width: 260px;
+        padding: 10px;
+        border: 1px solid #888;
+        border-radius: 6px;
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        color: #000;
+      }
+      .calendar-popup[hidden] {
+        display: none;
+      }
+      .calendar-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-weight: bold;
+      }
+      .form-actions .calendar-navigation button,
+      .form-actions .calendar-day {
+        padding: 5px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: #000;
+        cursor: pointer;
+      }
+      .calendar-weekdays,
+      .calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
         text-align: center;
+      }
+      .calendar-weekdays {
+        margin-bottom: 4px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .form-actions .calendar-day:hover,
+      .form-actions .calendar-day:focus-visible {
+        background: #e7effa;
+      }
+      .form-actions .calendar-day.is-selected {
+        background: #1769aa;
+        color: #fff;
+      }
+      .action-status {
+        display: none;
+      }
+      .custom-message-dialog {
+        width: min(420px, calc(100% - 32px));
+        padding: 28px 30px 24px;
+        border: 0;
+        border-radius: 16px;
+        color: #171717;
+        font-family:
+          "SolaimanLipi", "Kalpurush", "Nikosh", "Siyam Rupali", Arial,
+          sans-serif;
+        font-size: 16px;
+        line-height: 1.7;
+        box-shadow: 0 18px 54px rgba(0, 0, 0, 0.28);
+        text-align: center;
+        animation: message-pop-in 160ms ease-out;
+      }
+      .custom-message-dialog::backdrop {
+        background: rgba(15, 23, 42, 0.58);
+        backdrop-filter: blur(2px);
+      }
+      @keyframes message-pop-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .custom-message-icon {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        margin: 0 auto 14px;
+        place-items: center;
+        border-radius: 50%;
+        background: #eaf1ff;
+        color: #315fbd;
+        font-size: 28px;
+        font-weight: bold;
+      }
+      .custom-message-dialog[data-type="success"] .custom-message-icon {
+        background: #e8f6ed;
+        color: #27803a;
+      }
+      .custom-message-dialog[data-type="warning"] .custom-message-icon {
+        background: #fff4d8;
+        color: #a66a00;
+      }
+      .custom-message-dialog[data-type="error"] .custom-message-icon {
+        background: #ffebea;
+        color: #b42318;
+      }
+      .custom-message-dialog h2 {
+        margin: 0 0 8px;
+        color: #171717;
+        font-size: 21px;
+        line-height: 1.4;
+      }
+      .custom-message-dialog p {
+        margin: 0 0 24px;
+        color: #292929;
+        font-size: 16px;
+        line-height: 1.8;
+        overflow-wrap: anywhere;
+      }
+      .custom-message-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .custom-message-actions button {
+        min-width: 96px;
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 7px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        transition: filter 120ms ease, transform 120ms ease;
+      }
+      .custom-message-actions button:hover {
+        filter: brightness(0.96);
+      }
+      .custom-message-actions button:active {
+        transform: scale(0.98);
+      }
+      .custom-message-cancel {
+        background: #e8e8e8;
+        color: #222;
+      }
+      .custom-message-confirm {
+        background: #1769aa;
+        color: #fff;
+      }
+      .custom-message-dialog[data-mode="confirm"] .custom-message-confirm {
+        background: #27803a;
+      }
+      .custom-message-dialog[data-mode="progress"] .custom-message-icon {
+        border: 4px solid #e2e8f0;
+        border-top-color: #1769aa;
+        background: transparent;
+        animation: message-spinner 800ms linear infinite;
+        font-size: 0;
+      }
+      @keyframes message-spinner {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media screen and (max-width: 480px) {
+        .custom-message-dialog {
+          width: calc(100% - 24px);
+          max-width: 420px;
+          max-height: calc(100vh - 24px);
+          max-height: calc(100dvh - 24px);
+          padding: 22px 18px 18px;
+          border-radius: 14px;
+          overflow-y: auto;
+        }
+        .custom-message-icon {
+          width: 48px;
+          height: 48px;
+          margin-bottom: 12px;
+          font-size: 25px;
+        }
+        .custom-message-dialog h2 {
+          font-size: 19px;
+        }
+        .custom-message-dialog p {
+          margin-bottom: 20px;
+          font-size: 15px;
+          line-height: 1.75;
+        }
+        .custom-message-actions {
+          gap: 10px;
+        }
+        .custom-message-actions button {
+          flex: 1;
+          min-width: 0;
+          min-height: 44px;
+          padding: 10px 12px;
+        }
+      }
+      @media screen and (max-width: 700px) {
+        .form-actions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          width: 100%;
+          padding: 10px;
+          position: sticky;
+          top: 0;
+          z-index: 20;
+          background: #f3f4f6;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        }
+        .form-actions > button,
+        .form-actions .date-display {
+          width: 100%;
+          min-width: 0;
+          min-height: 56px;
+          padding: 12px 8px;
+          font-size: 16px;
+          line-height: 1.3;
+        }
+        .calendar-picker {
+          width: 100%;
+        }
+        .calendar-popup {
+          width: min(280px, calc(100vw - 32px));
+        }
+      }
+      @media screen and (max-width: 480px) {
+        .form-actions {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 8px;
+          padding: 10px 16px;
+        }
+        .form-actions > button,
+        .form-actions .date-display {
+          min-height: 56px;
+          padding: 14px 12px;
+          font-size: 18px;
+        }
       }
 
       @media print {
@@ -239,16 +496,82 @@
   <body>
     <div class="form-actions no-print">
       <button class="print-button" type="button" onclick="window.print()">
-        প্রিন্ট করুন
+        Print
       </button>
       <button id="save-form-button" class="save-button" type="button">
-        সেভ
+        Save
       </button>
       <button id="clear-form-button" class="clear-button" type="button">
-        ক্লিয়ার
+        Clear
       </button>
-      <span id="action-status" class="action-status" role="status"></span>
+      <div class="calendar-picker">
+        <button
+          id="load-summary-date"
+          class="date-display"
+          type="button"
+          aria-label="Choose date to view saved data"
+          aria-expanded="false"
+          aria-controls="summary-calendar"
+        ></button>
+        <div
+          id="summary-calendar"
+          class="calendar-popup"
+          role="dialog"
+          aria-label="Choose a date"
+          hidden
+        >
+          <div class="calendar-navigation">
+            <button id="previous-month-button" type="button" aria-label="Previous month">&lt;</button>
+            <span id="calendar-month-label"></span>
+            <button id="next-month-button" type="button" aria-label="Next month">&gt;</button>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>Su</span>
+            <span>Mo</span>
+            <span>Tu</span>
+            <span>We</span>
+            <span>Th</span>
+            <span>Fr</span>
+            <span>Sa</span>
+          </div>
+          <div id="calendar-days" class="calendar-days"></div>
+        </div>
+      </div>
+      <button id="load-summary-button" class="load-button" type="button">
+        View Saved Data
+      </button>
+      <div
+        id="action-status"
+        class="action-status"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
     </div>
+    <dialog id="custom-message-dialog" class="custom-message-dialog">
+      <div id="custom-message-icon" class="custom-message-icon" aria-hidden="true"></div>
+      <h2 id="custom-message-title"></h2>
+      <p id="custom-message-text"></p>
+      <form method="dialog">
+        <div class="custom-message-actions">
+          <button
+            id="custom-message-cancel"
+            class="custom-message-cancel"
+            type="submit"
+            value="cancel"
+          >
+            Cancel
+          </button>
+          <button
+            class="custom-message-confirm"
+            type="submit"
+            value="confirm"
+          >
+            Continue
+          </button>
+        </div>
+      </form>
+    </dialog>
     <div class="page-container">
       <div class="header">
         <img
@@ -513,7 +836,7 @@
             <td colspan="3" style="text-align: right; padding-right: 15px; font-size: 12pt">
               মোটঃ
             </td>
-            <td></td>
+            <td style="text-align: center"></td>
             <td></td>
             <td></td>
             <td></td>
@@ -560,12 +883,12 @@
       <table class="signature-section">
         <tr>
           <td style="text-align: left">
-            ডিপো ম্যানেজার (নাম ও সিল)<br /><br />
+            ডিপো ম্যানেজার (নাম ও সিল)<br />
             ডিপোঃ<input class="write-in-field" type="text" aria-label="ডিপো" />
           </td>
           <td style="text-align: right">
-            <div style="display: inline-block; text-align: left">
-              আর.এস.এম<br /><br />
+            <div style="display: inline-block; text-align: left; margin-right: 12px">
+              আর.এস.এম<br />
               জোনঃ<input class="write-in-field" type="text" aria-label="জোন" />
             </div>
           </td>
@@ -604,15 +927,84 @@
         return firebase.firestore(app);
       };
       let numberLocale = "bn-BD";
-      const dateFormatter = () =>
-        new Intl.DateTimeFormat(numberLocale === "bn-BD" ? "bn-BD" : "en-GB", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        });
-      const updateDate = () => {
+      let activeSummaryDate = new Date();
+      let calendarViewDate = new Date(
+        activeSummaryDate.getFullYear(),
+        activeSummaryDate.getMonth(),
+        1,
+      );
+      const formatEnglishDate = (date) => {
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = new Intl.DateTimeFormat("en-US", {
+          month: "short",
+        }).format(date);
+        return `${day}-${month}-${date.getFullYear()}`;
+      };
+      const formatDateInput = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+      const updateDate = (date = activeSummaryDate) => {
         document.getElementById("current-date").textContent =
-          dateFormatter().format(new Date());
+          formatEnglishDate(date);
+      };
+      const updateCalendar = () => {
+        const monthLabel = new Intl.DateTimeFormat("en-US", {
+          month: "long",
+          year: "numeric",
+        }).format(calendarViewDate);
+        document.getElementById("calendar-month-label").textContent =
+          monthLabel;
+        const daysContainer = document.getElementById("calendar-days");
+        daysContainer.replaceChildren();
+        const firstDay = new Date(
+          calendarViewDate.getFullYear(),
+          calendarViewDate.getMonth(),
+          1,
+        ).getDay();
+        const daysInMonth = new Date(
+          calendarViewDate.getFullYear(),
+          calendarViewDate.getMonth() + 1,
+          0,
+        ).getDate();
+        for (let index = 0; index < firstDay; index++) {
+          const spacer = document.createElement("span");
+          spacer.setAttribute("aria-hidden", "true");
+          daysContainer.append(spacer);
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+          const date = new Date(
+            calendarViewDate.getFullYear(),
+            calendarViewDate.getMonth(),
+            day,
+          );
+          const dayButton = document.createElement("button");
+          dayButton.className = "calendar-day";
+          dayButton.type = "button";
+          dayButton.textContent = String(day);
+          dayButton.setAttribute("aria-label", formatEnglishDate(date));
+          dayButton.dataset.date = formatDateInput(date);
+          if (formatDateInput(date) === formatDateInput(activeSummaryDate)) {
+            dayButton.classList.add("is-selected");
+            dayButton.setAttribute("aria-pressed", "true");
+          } else {
+            dayButton.setAttribute("aria-pressed", "false");
+          }
+          daysContainer.append(dayButton);
+        }
+      };
+      const getSummaryPathParts = (date) => {
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return {
+          dateKey: `${day}-${month}-${year}`,
+          monthDocumentId: `${new Intl.DateTimeFormat("en-US", {
+            month: "short",
+          }).format(date).toUpperCase()}-${year}`,
+        };
       };
 
       document
@@ -706,6 +1098,65 @@
 
       const tableBody = document.querySelector(".data-table tbody");
       const storageKey = "value-wise-summary-form";
+      const messageDialog = document.getElementById("custom-message-dialog");
+      const messageTitle = document.getElementById("custom-message-title");
+      const messageText = document.getElementById("custom-message-text");
+      const messageIcon = document.getElementById("custom-message-icon");
+      const messageCancelButton = document.getElementById(
+        "custom-message-cancel",
+      );
+      const messageConfirmButton = messageDialog.querySelector(
+        ".custom-message-confirm",
+      );
+      const messageSettings = {
+        info: { title: "Notice", icon: "i" },
+        success: { title: "Success", icon: "✓" },
+        warning: { title: "Notice", icon: "!" },
+        error: { title: "Error", icon: "×" },
+      };
+      const showMessageDialog = (message, type, mode = "message") =>
+        new Promise((resolve) => {
+          const settings = messageSettings[type] ?? messageSettings.info;
+          messageDialog.dataset.type = type;
+          messageDialog.dataset.mode = mode;
+          messageTitle.textContent =
+            mode === "confirm" ? "Please confirm" : settings.title;
+          messageIcon.textContent = mode === "confirm" ? "?" : settings.icon;
+          messageText.textContent = message;
+          messageCancelButton.hidden = mode !== "confirm";
+          messageConfirmButton.textContent =
+            mode === "confirm" ? "Continue" : "OK";
+          messageConfirmButton.value =
+            mode === "confirm" ? "confirm" : "ok";
+          messageDialog.addEventListener(
+            "close",
+            () => resolve(
+              mode === "confirm"
+                ? messageDialog.returnValue === "confirm"
+                : undefined,
+            ),
+            { once: true },
+          );
+          messageDialog.showModal();
+        });
+      const showStatus = (message, type = "info") =>
+        showMessageDialog(message, type);
+      const showConfirm = (message) =>
+        showMessageDialog(message, "info", "confirm");
+      const showProgress = (message) => {
+        messageDialog.dataset.type = "info";
+        messageDialog.dataset.mode = "progress";
+        messageTitle.textContent = "Please wait";
+        messageIcon.textContent = "";
+        messageText.textContent = message;
+        messageCancelButton.hidden = true;
+        messageConfirmButton.hidden = true;
+        messageDialog.showModal();
+      };
+      const closeProgress = () => {
+        messageConfirmButton.hidden = false;
+        if (messageDialog.open) messageDialog.close();
+      };
       const getEditableCells = () =>
         [...tableBody.querySelectorAll('td[contenteditable="true"]')];
       const saveForm = () => {
@@ -728,21 +1179,22 @@
         getEditableCells().forEach((cell) => {
           cell.textContent = "";
         });
+        activeSummaryDate = new Date();
+        document.getElementById("load-summary-date").textContent =
+          formatEnglishDate(activeSummaryDate);
+        calendarViewDate = new Date(
+          activeSummaryDate.getFullYear(),
+          activeSummaryDate.getMonth(),
+          1,
+        );
         numberLocale = "bn-BD";
         updateDate();
         updateAmounts();
       };
       const saveSummaryToFirestore = async () => {
         const firestore = getFirestore();
-        const now = new Date();
-        const dateKey = [
-          String(now.getDate()).padStart(2, "0"),
-          String(now.getMonth() + 1).padStart(2, "0"),
-          now.getFullYear(),
-        ].join("-");
-        const monthDocumentId = `${new Intl.DateTimeFormat("en-US", {
-          month: "short",
-        }).format(now).toUpperCase()}-${now.getFullYear()}`;
+        const { dateKey, monthDocumentId } =
+          getSummaryPathParts(activeSummaryDate);
         const rows = [
           ...tableBody.querySelectorAll("tr:not(.total-row)"),
         ].map((row) => {
@@ -790,6 +1242,77 @@
             { merge: true },
           );
       };
+      const loadSummaryFromFirestore = async (dateValue) => {
+        const [year, month, day] = dateValue.split("-").map(Number);
+        const selectedDate = new Date(year, month - 1, day);
+        const { dateKey, monthDocumentId } =
+          getSummaryPathParts(selectedDate);
+        const snapshot = await getFirestore()
+          .collection("CHEMIST WISE SUMMARY")
+          .doc(monthDocumentId)
+          .collection("SUMMARY")
+          .doc(dateKey)
+          .get();
+
+        if (!snapshot.exists) {
+          return {
+            message: `${dateKey} তারিখের কোনো সেভ ডাটা পাওয়া যায়নি`,
+            type: "warning",
+          };
+        }
+
+        const formData = snapshot.data();
+        const requiredFields = [
+          "pharmacyName",
+          "pharmacyCode",
+          "amountA",
+          "discountPercent",
+          "amountB",
+        ];
+        const formRows = [
+          ...tableBody.querySelectorAll("tr:not(.total-row)"),
+        ];
+        if (
+          !formData ||
+          !Array.isArray(formData.rows) ||
+          formData.rows.length > formRows.length ||
+          !formData.rows.every(
+            (row) =>
+              row &&
+              requiredFields.every((field) => typeof row[field] === "string"),
+          )
+        ) {
+          throw new Error("সেভ করা ডাটার ফরম্যাট সঠিক নয়।");
+        }
+
+        getEditableCells().forEach((cell) => {
+          cell.textContent = "";
+        });
+        formData.rows.forEach((savedRow, rowIndex) => {
+          const cells = formRows[rowIndex].querySelectorAll("td");
+          cells[1].textContent = savedRow.pharmacyName;
+          cells[2].textContent = savedRow.pharmacyCode;
+          cells[3].textContent = savedRow.amountA;
+          cells[4].textContent = savedRow.discountPercent;
+          cells[5].textContent = savedRow.amountB;
+        });
+        if (
+          formData.numberLocale === "bn-BD" ||
+          formData.numberLocale === "en-US"
+        ) {
+          numberLocale = formData.numberLocale;
+        }
+        activeSummaryDate = selectedDate;
+        updateDate();
+        updateAmounts();
+        const savedLocally = saveForm();
+        return {
+          message: savedLocally
+            ? `${dateKey} তারিখের সেভ ডাটা ফর্মে দেখানো হয়েছে`
+            : `${dateKey} তারিখের ডাটা দেখানো হয়েছে, তবে ব্রাউজারে সংরক্ষণ করা যায়নি`,
+          type: savedLocally ? "success" : "warning",
+        };
+      };
       const restoreForm = () => {
         try {
           const saved = localStorage.getItem(storageKey);
@@ -829,6 +1352,62 @@
 
       restoreForm();
       updateDate();
+      document.getElementById("load-summary-date").textContent =
+        formatEnglishDate(activeSummaryDate);
+      updateCalendar();
+      const calendarPopup = document.getElementById("summary-calendar");
+      const dateDisplay = document.getElementById("load-summary-date");
+      const closeCalendar = () => {
+        calendarPopup.hidden = true;
+        dateDisplay.setAttribute("aria-expanded", "false");
+      };
+      dateDisplay.addEventListener("click", () => {
+        calendarViewDate = new Date(
+          activeSummaryDate.getFullYear(),
+          activeSummaryDate.getMonth(),
+          1,
+        );
+        updateCalendar();
+        calendarPopup.hidden = !calendarPopup.hidden;
+        dateDisplay.setAttribute(
+          "aria-expanded",
+          String(!calendarPopup.hidden),
+        );
+      });
+      document
+        .getElementById("previous-month-button")
+        .addEventListener("click", () => {
+          calendarViewDate.setMonth(calendarViewDate.getMonth() - 1);
+          updateCalendar();
+        });
+      document
+        .getElementById("next-month-button")
+        .addEventListener("click", () => {
+          calendarViewDate.setMonth(calendarViewDate.getMonth() + 1);
+          updateCalendar();
+        });
+      document
+        .getElementById("calendar-days")
+        .addEventListener("click", (event) => {
+          const dayButton = event.target.closest("button[data-date]");
+          if (!dayButton) return;
+          const [year, month, day] = dayButton.dataset.date
+            .split("-")
+            .map(Number);
+          activeSummaryDate = new Date(year, month - 1, day);
+          dateDisplay.textContent = formatEnglishDate(activeSummaryDate);
+          updateDate();
+          closeCalendar();
+        });
+      document.addEventListener("pointerdown", (event) => {
+        if (!event.target.closest(".calendar-picker")) closeCalendar();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !calendarPopup.hidden) {
+          closeCalendar();
+          dateDisplay.focus();
+        }
+      });
       tableBody.addEventListener("compositionstart", (event) => {
         if (event.target.matches('td[contenteditable="true"]')) {
           composingCell = event.target;
@@ -849,17 +1428,68 @@
           saveForm();
         }
       });
-      const actionStatus = document.getElementById("action-status");
+      document
+        .getElementById("load-summary-button")
+        .addEventListener("click", async (event) => {
+          if (
+            getEditableCells().some((cell) => cell.textContent.trim()) &&
+            !(await showConfirm(
+              "ফর্মের বর্তমান তথ্য বদলে সেভ করা ডাটা দেখাবেন?",
+            ))
+          ) {
+            return;
+          }
+
+          const loadButton = event.currentTarget;
+          loadButton.disabled = true;
+          showProgress("Firestore থেকে ডাটা আনা হচ্ছে...");
+          let result;
+          try {
+            result = await loadSummaryFromFirestore(
+              formatDateInput(activeSummaryDate),
+            );
+          } catch (error) {
+            console.error("Firestore থেকে সেভ করা ডাটা আনা যায়নি।", error);
+            const errorCode =
+              error && typeof error.code === "string"
+                ? error.code
+                : "unknown";
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            result = {
+              message: `সেভ ডাটা দেখানো যায়নি (${errorCode}): ${errorMessage}`,
+              type: "error",
+            };
+          } finally {
+            closeProgress();
+            loadButton.disabled = false;
+          }
+          await showStatus(result.message, result.type);
+        });
       document
         .getElementById("save-form-button")
         .addEventListener("click", async (event) => {
           const saveButton = event.currentTarget;
           saveButton.disabled = true;
-          actionStatus.textContent = "Firestore-এ সংরক্ষণ হচ্ছে...";
+          showProgress("Firestore-এ সংরক্ষণ হচ্ছে...");
           saveForm();
-
+          let result;
           try {
             await saveSummaryToFirestore();
+            try {
+              clearForm();
+              result = {
+                message: "Firestore-এ সেভ হয়েছে, ফর্ম ক্লিয়ার করা হয়েছে",
+                type: "success",
+              };
+            } catch (error) {
+              console.error("সেভ করা ফর্মের স্থানীয় তথ্য মুছে ফেলা যায়নি।", error);
+              result = {
+                message:
+                  "Firestore-এ সেভ হয়েছে, তবে স্থানীয় তথ্য ক্লিয়ার করা যায়নি",
+                type: "warning",
+              };
+            }
           } catch (error) {
             console.error("Firestore-এ SUMMARY- ডকুমেন্ট সংরক্ষণ করা যায়নি।", error);
             const errorCode =
@@ -868,37 +1498,30 @@
                 : "unknown";
             const errorMessage =
               error instanceof Error ? error.message : String(error);
-            actionStatus.textContent = `Firestore-এ সেভ হয়নি (${errorCode}): ${errorMessage}`;
-            saveButton.disabled = false;
-            return;
-          }
-
-          try {
-            clearForm();
-            actionStatus.textContent =
-              "Firestore-এ সেভ হয়েছে, ফর্ম ক্লিয়ার করা হয়েছে";
-          } catch (error) {
-            console.error("সেভ করা ফর্মের স্থানীয় তথ্য মুছে ফেলা যায়নি।", error);
-            actionStatus.textContent =
-              "Firestore-এ সেভ হয়েছে, তবে স্থানীয় তথ্য ক্লিয়ার করা যায়নি";
+            result = {
+              message: `Firestore-এ সেভ হয়নি (${errorCode}): ${errorMessage}`,
+              type: "error",
+            };
           } finally {
+            closeProgress();
             saveButton.disabled = false;
           }
+          await showStatus(result.message, result.type);
         });
       document
         .getElementById("clear-form-button")
-        .addEventListener("click", () => {
-          if (!window.confirm("ফর্মের সব তথ্য মুছে ফেলতে চান?")) return;
+        .addEventListener("click", async () => {
+          if (!(await showConfirm("ফর্মের সব তথ্য মুছে ফেলতে চান?"))) return;
 
           try {
             clearForm();
           } catch (error) {
             console.error("সংরক্ষিত ফর্মের তথ্য মুছে ফেলা যায়নি।", error);
-            actionStatus.textContent = "সংরক্ষিত তথ্য মুছে ফেলা যায়নি";
+            await showStatus("সংরক্ষিত তথ্য মুছে ফেলা যায়নি", "error");
             return;
           }
 
-          actionStatus.textContent = "ফর্মের সব তথ্য মুছে ফেলা হয়েছে";
+          await showStatus("ফর্মের সব তথ্য মুছে ফেলা হয়েছে", "success");
         });
       updateAmounts();
     </script>
