@@ -380,6 +380,39 @@
         background: #1769aa;
         color: #fff;
       }
+      .zone-picker-dialog {
+        max-height: min(620px, calc(100vh - 32px));
+        overflow-y: auto;
+        text-align: left;
+      }
+      .zone-picker-dialog h2,
+      .zone-picker-dialog p {
+        text-align: center;
+      }
+      .zone-picker-list {
+        display: grid;
+        gap: 8px;
+        max-height: 55vh;
+        margin: 0 0 20px;
+        overflow-y: auto;
+      }
+      .zone-picker-option {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #d0d7e2;
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #171717;
+        font: inherit;
+        text-align: left;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+      }
+      .zone-picker-option:hover,
+      .zone-picker-option:focus-visible {
+        border-color: #1769aa;
+        background: #eaf1ff;
+      }
       .custom-message-dialog[data-mode="confirm"] .custom-message-confirm {
         background: #27803a;
       }
@@ -570,6 +603,16 @@
             Continue
           </button>
         </div>
+      </form>
+    </dialog>
+    <dialog id="zone-picker-dialog" class="custom-message-dialog zone-picker-dialog">
+      <h2>জোন নির্বাচন করুন</h2>
+      <p>নির্বাচিত তারিখে সেভ করা জোনের তালিকা:</p>
+      <div id="zone-picker-list" class="zone-picker-list"></div>
+      <form method="dialog" class="custom-message-actions">
+        <button class="custom-message-cancel" type="submit" value="cancel">
+          Cancel
+        </button>
       </form>
     </dialog>
     <div class="page-container">
@@ -889,7 +932,14 @@
           <td style="text-align: right">
             <div style="display: inline-block; text-align: left; margin-right: 12px">
               আর.এস.এম<br />
-              জোনঃ<input class="write-in-field" type="text" aria-label="জোন" />
+              জোনঃ<input
+                id="zone-name"
+                class="write-in-field"
+                type="text"
+                required
+                maxlength="100"
+                aria-label="জোন"
+              />
             </div>
           </td>
         </tr>
@@ -1005,6 +1055,55 @@
             month: "short",
           }).format(date).toUpperCase()}-${year}`,
         };
+      };
+      const getSummaryDocumentId = (date, zoneName) => {
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        const safeZoneName = zoneName.trim().replace(/\//g, "_");
+        return `${day}_${month}_${year}_${safeZoneName}`;
+      };
+      const getSavedSummariesForDate = async (dateValue) => {
+        const [year, month, day] = dateValue.split("-").map(Number);
+        const selectedDate = new Date(year, month - 1, day);
+        const { dateKey, monthDocumentId } =
+          getSummaryPathParts(selectedDate);
+        const summaryCollection = getFirestore()
+          .collection("CHEMIST WISE SUMMARY")
+          .doc(monthDocumentId)
+          .collection("SUMMARY");
+        const snapshot = await summaryCollection
+          .where("date", "==", dateKey)
+          .get();
+        const summaries = snapshot.docs.map((summaryDocument) => {
+          const data = summaryDocument.data();
+          const zoneName =
+            typeof data.zoneName === "string" ? data.zoneName.trim() : "";
+          return {
+            documentId: summaryDocument.id,
+            zoneName,
+            label: zoneName || "পুরনো সেভ ডাটা (জোন উল্লেখ নেই)",
+          };
+        });
+        const legacyDocument = await summaryCollection.doc(dateKey).get();
+        if (
+          legacyDocument.exists &&
+          !summaries.some((summary) => summary.documentId === legacyDocument.id)
+        ) {
+          const data = legacyDocument.data();
+          const zoneName =
+            data && typeof data.zoneName === "string"
+              ? data.zoneName.trim()
+              : "";
+          summaries.push({
+            documentId: legacyDocument.id,
+            zoneName,
+            label: zoneName || "পুরনো সেভ ডাটা (জোন উল্লেখ নেই)",
+          });
+        }
+        return summaries.sort((first, second) =>
+          first.label.localeCompare(second.label, "bn"),
+        );
       };
 
       document
@@ -1143,6 +1242,43 @@
         showMessageDialog(message, type);
       const showConfirm = (message) =>
         showMessageDialog(message, "info", "confirm");
+      const showZonePicker = (summaries) =>
+        new Promise((resolve) => {
+          const zonePickerDialog = document.getElementById(
+            "zone-picker-dialog",
+          );
+          const zonePickerList = document.getElementById("zone-picker-list");
+          zonePickerList.replaceChildren();
+          summaries.forEach((summary, index) => {
+            const button = document.createElement("button");
+            button.className = "zone-picker-option";
+            button.type = "button";
+            button.textContent = summary.label;
+            button.addEventListener("click", () => {
+              zonePickerDialog.close(String(index));
+            });
+            zonePickerList.append(button);
+          });
+          zonePickerDialog.addEventListener(
+            "close",
+            () => {
+              const returnValue = zonePickerDialog.returnValue;
+              const selectedIndex =
+                returnValue === "" ? -1 : Number(returnValue);
+              resolve(
+                Number.isInteger(selectedIndex) &&
+                  selectedIndex >= 0 &&
+                  selectedIndex < summaries.length
+                  ? summaries[selectedIndex] ?? null
+                  : null,
+              );
+            },
+            { once: true },
+          );
+          zonePickerDialog.showModal();
+          const firstOption = zonePickerList.querySelector("button");
+          if (firstOption) firstOption.focus();
+        });
       const showProgress = (message) => {
         messageDialog.dataset.type = "info";
         messageDialog.dataset.mode = "progress";
@@ -1166,6 +1302,7 @@
             JSON.stringify({
               values: getEditableCells().map((cell) => cell.textContent),
               numberLocale,
+              zoneName: document.getElementById("zone-name").value,
             }),
           );
           return true;
@@ -1193,8 +1330,13 @@
       };
       const saveSummaryToFirestore = async () => {
         const firestore = getFirestore();
+        const zoneName = document.getElementById("zone-name").value.trim();
+        if (!zoneName) {
+          throw new Error("সেভ করার আগে জোনের নাম লিখুন।");
+        }
         const { dateKey, monthDocumentId } =
           getSummaryPathParts(activeSummaryDate);
+        const documentId = getSummaryDocumentId(activeSummaryDate, zoneName);
         const rows = [
           ...tableBody.querySelectorAll("tr:not(.total-row)"),
         ].map((row) => {
@@ -1223,12 +1365,13 @@
           .collection("CHEMIST WISE SUMMARY")
           .doc(monthDocumentId)
           .collection("SUMMARY")
-          .doc(dateKey)
+          .doc(documentId)
           .set(
             {
               invoiceNo: dateKey,
               date: dateKey,
               month: monthDocumentId,
+              zoneName,
               numberLocale,
               rows,
               totals: {
@@ -1242,17 +1385,29 @@
             { merge: true },
           );
       };
-      const loadSummaryFromFirestore = async (dateValue) => {
+      const loadSummaryFromFirestore = async (dateValue, summary) => {
         const [year, month, day] = dateValue.split("-").map(Number);
         const selectedDate = new Date(year, month - 1, day);
         const { dateKey, monthDocumentId } =
           getSummaryPathParts(selectedDate);
-        const snapshot = await getFirestore()
+        const summaryCollection = getFirestore()
           .collection("CHEMIST WISE SUMMARY")
           .doc(monthDocumentId)
-          .collection("SUMMARY")
-          .doc(dateKey)
+          .collection("SUMMARY");
+        let snapshot = await summaryCollection
+          .doc(summary.documentId)
           .get();
+        if (
+          !snapshot.exists &&
+          summary.documentId !== getSummaryDocumentId(selectedDate, summary.zoneName)
+        ) {
+          snapshot = await summaryCollection
+            .doc(getSummaryDocumentId(selectedDate, summary.zoneName))
+            .get();
+        }
+        if (!snapshot.exists && summary.documentId !== dateKey) {
+          snapshot = await summaryCollection.doc(dateKey).get();
+        }
 
         if (!snapshot.exists) {
           return {
@@ -1303,6 +1458,11 @@
           numberLocale = formData.numberLocale;
         }
         activeSummaryDate = selectedDate;
+        if (typeof formData.zoneName === "string") {
+          document.getElementById("zone-name").value = formData.zoneName;
+        } else if (summary.zoneName) {
+          document.getElementById("zone-name").value = summary.zoneName;
+        }
         updateDate();
         updateAmounts();
         const savedLocally = saveForm();
@@ -1333,6 +1493,9 @@
           });
           if (formData.numberLocale === "bn-BD" || formData.numberLocale === "en-US") {
             numberLocale = formData.numberLocale;
+          }
+          if (typeof formData.zoneName === "string") {
+            document.getElementById("zone-name").value = formData.zoneName;
           }
         } catch (error) {
           console.error("সংরক্ষিত ফর্মের তথ্য পড়া যায়নি।", error);
@@ -1429,24 +1592,67 @@
         }
       });
       document
+        .getElementById("zone-name")
+        .addEventListener("input", saveForm);
+      document
         .getElementById("load-summary-button")
         .addEventListener("click", async (event) => {
+          const loadButton = event.currentTarget;
+          loadButton.disabled = true;
+          let summaries;
+          try {
+            showProgress("নির্বাচিত তারিখের জোন খোঁজা হচ্ছে...");
+            summaries = await getSavedSummariesForDate(
+              formatDateInput(activeSummaryDate),
+            );
+          } catch (error) {
+            console.error("Firestore থেকে সেভ করা জোনের তালিকা আনা যায়নি।", error);
+            const errorCode =
+              error && typeof error.code === "string"
+                ? error.code
+                : "unknown";
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            closeProgress();
+            loadButton.disabled = false;
+            await showStatus(
+              `সেভ ডাটার জোনের তালিকা আনা যায়নি (${errorCode}): ${errorMessage}`,
+              "error",
+            );
+            return;
+          }
+          closeProgress();
+
+          if (!summaries.length) {
+            loadButton.disabled = false;
+            await showStatus(
+              `${formatEnglishDate(activeSummaryDate)} তারিখের কোনো সেভ ডাটা পাওয়া যায়নি`,
+              "warning",
+            );
+            return;
+          }
+
+          const selectedSummary = await showZonePicker(summaries);
+          if (!selectedSummary) {
+            loadButton.disabled = false;
+            return;
+          }
           if (
             getEditableCells().some((cell) => cell.textContent.trim()) &&
             !(await showConfirm(
               "ফর্মের বর্তমান তথ্য বদলে সেভ করা ডাটা দেখাবেন?",
             ))
           ) {
+            loadButton.disabled = false;
             return;
           }
 
-          const loadButton = event.currentTarget;
-          loadButton.disabled = true;
           showProgress("Firestore থেকে ডাটা আনা হচ্ছে...");
           let result;
           try {
             result = await loadSummaryFromFirestore(
               formatDateInput(activeSummaryDate),
+              selectedSummary,
             );
           } catch (error) {
             console.error("Firestore থেকে সেভ করা ডাটা আনা যায়নি।", error);
@@ -1470,6 +1676,12 @@
         .getElementById("save-form-button")
         .addEventListener("click", async (event) => {
           const saveButton = event.currentTarget;
+          const zoneInput = document.getElementById("zone-name");
+          if (!zoneInput.value.trim()) {
+            await showStatus("সেভ করার আগে জোনের নাম লিখুন।", "warning");
+            zoneInput.focus();
+            return;
+          }
           saveButton.disabled = true;
           showProgress("Firestore-এ সংরক্ষণ হচ্ছে...");
           saveForm();
