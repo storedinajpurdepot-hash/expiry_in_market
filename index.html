@@ -797,10 +797,6 @@
         width: 98px;
         margin-right: 4px;
       }
-      /* Chemist Code লেবেলের লেখা কলনের (:) সাথে লেগে থাকবে, বড় ফাঁকা জায়গা থাকবে না */
-      .info .right label[for="ccode"] {
-        justify-content: flex-end;
-      }
       /* "Name of Chemist" লেখাটি 98px লেবেল-বক্সের চেয়ে বড়, তাই ছোট ফন্ট দিয়ে ফিট করানো হলো */
       .info .left label[for="chemist"] {
         font-size: 10.5px;
@@ -908,6 +904,9 @@
       }
       tr.total-row td.inv-total-cell input {
         text-align: right !important;
+      }
+      tr.total-row td.qty-total-cell input {
+        text-align: center !important;
       }
       /* ---- Saved Form শুধু: একাধিক পাতা থাকলে শেষ পাতায় প্রতি পাতার Invoice
       Value যোগফলের ব্রেকডাউন (Total সেলের ঠিক নিচে, ছোট করে) ---- */
@@ -4528,7 +4527,7 @@
                 <th>Batch No.</th>
                 <th>Date of Mfg.</th>
                 <th>Date of Exp</th>
-                <th>Quantity</th>
+                <th>Quantity<br />Pcs</th>
                 <th>Invoice Value</th>
               </tr>
             </thead>
@@ -4599,14 +4598,6 @@
             </select>
             <button
               type="button"
-              class="entry-blank-btn"
-              id="productListBack"
-              hidden
-            >
-              ← Back
-            </button>
-            <button
-              type="button"
               id="entryPanelRefresh"
               class="panel-refresh"
               title="রিফ্রেশ করে নতুন করে প্রবেশ করুন"
@@ -4621,6 +4612,14 @@
             </button>
           </h2>
           <div class="header-actions">
+            <button
+              type="button"
+              class="entry-blank-btn"
+              id="productListBack"
+              hidden
+            >
+              ← Back
+            </button>
             <button
               type="button"
               class="entry-blank-btn"
@@ -5164,7 +5163,7 @@
             <tbody id="viewRows"></tbody>
             <tfoot>
               <tr class="grand-row">
-                <td colspan="6">Grand Total</td>
+                <td colspan="5">Grand Total</td>
                 <td id="viewGrandQty">0</td>
                 <td id="viewGrandValue">0</td>
                 <td></td>
@@ -6297,13 +6296,13 @@
           inp.tabIndex = -1;
         });
 
-        // ---- Saved Form শুধু: ২১ সারির নিচে Total (৭ কলামের ৬টা স্প্যান করে ডানে "Total",
-        // পাশে Invoice Value-এর যোগফল) ----
+        // ---- Saved Form-এর Total row-তে Quantity ও Invoice Value-এর যোগফল ----
         (function () {
           const tr = document.createElement("tr");
           tr.className = "total-row";
           tr.innerHTML =
-            '<td colspan="6" class="total-label-cell"><input type="text" readonly tabindex="-1" value="Total" aria-label="Total"></td>' +
+            '<td colspan="5" class="total-label-cell"><input type="text" readonly tabindex="-1" value="Total" aria-label="Total"></td>' +
+            '<td class="qty-total-cell"><input type="text" readonly tabindex="-1" aria-label="Total quantity"></td>' +
             '<td class="inv-total-cell"><div class="inv-breakdown" aria-hidden="true"></div><input type="text" readonly tabindex="-1" aria-label="Total invoice value"></td>';
           savedTbody.appendChild(tr);
         })();
@@ -6335,7 +6334,8 @@
           const tr = document.createElement("tr");
           tr.className = "total-row";
           tr.innerHTML =
-            '<td colspan="6" class="total-label-cell"><input type="text" readonly tabindex="-1" value="Total" aria-label="Total"></td>' +
+            '<td colspan="5" class="total-label-cell"><input type="text" readonly tabindex="-1" value="Total" aria-label="Total"></td>' +
+            '<td class="qty-total-cell"><input type="text" readonly tabindex="-1" aria-label="Total quantity"></td>' +
             '<td class="inv-total-cell"><input type="text" readonly tabindex="-1" aria-label="Total invoice value"></td>';
           blankForm.querySelector("tbody").appendChild(tr);
         })();
@@ -6497,13 +6497,13 @@
           inp.tabIndex = -1;
         });
 
-        // ---- Summary Form শুধু: ২১ সারির নিচে Total সারি (Code কলাম যোগ হওয়ায়
-        // এখানে colspan ৭, কারণ এখন Invoice Value-এর আগে ৭টা কলাম আছে) ----
+        // ---- Summary Form-এর Total row-তে Quantity ও Invoice Value-এর যোগফল ----
         (function () {
           const tr = document.createElement("tr");
           tr.className = "total-row";
           tr.innerHTML =
-            '<td colspan="7" class="total-label-cell"><input type="text" readonly tabindex="-1" value="Total" aria-label="Total"></td>' +
+            '<td colspan="6" class="total-label-cell"><input type="text" readonly tabindex="-1" value="Total" aria-label="Total"></td>' +
+            '<td class="qty-total-cell"><input type="text" readonly tabindex="-1" aria-label="Total quantity"></td>' +
             '<td class="inv-total-cell"><div class="inv-breakdown" aria-hidden="true"></div><input type="text" readonly tabindex="-1" aria-label="Total invoice value"></td>';
           summaryTbody.appendChild(tr);
         })();
@@ -7530,6 +7530,7 @@
           savedPages.forEach((pg, p) => {
             const pageNo = pg.form.querySelector(".pageno");
             if (pageNo) pageNo.textContent = "Page " + (p + 1) + " of " + n;
+            const qtyBeforePage = qtySum;
             const invBeforePage = invSum;
             Object.keys(pg.fields).forEach((k) => {
               if (pg.fields[k])
@@ -7605,6 +7606,8 @@
             pageInvTotals.push(pageOwnInv);
             const totRow = pg.tbody.querySelector(".total-row");
             if (totRow) {
+              const qtyInput = totRow.querySelector(".qty-total-cell input");
+              if (qtyInput) qtyInput.value = String(qtySum - qtyBeforePage);
               const invInput = totRow.querySelector(".inv-total-cell input");
               if (invInput)
                 invInput.value = pageOwnInv
@@ -7667,6 +7670,7 @@
           summaryPages.forEach((pg, p) => {
             const pageNo = pg.form.querySelector(".pageno");
             if (pageNo) pageNo.textContent = "Page " + (p + 1) + " of " + n;
+            const qtyBeforePage = qtySum;
             const invBeforePage = invSum;
             Object.keys(pg.fields).forEach((k) => {
               if (pg.fields[k])
@@ -7734,6 +7738,8 @@
             pageInvTotals.push(pageOwnInv);
             const totRow = pg.tbody.querySelector(".total-row");
             if (totRow) {
+              const qtyInput = totRow.querySelector(".qty-total-cell input");
+              if (qtyInput) qtyInput.value = String(qtySum - qtyBeforePage);
               const invInput = totRow.querySelector(".inv-total-cell input");
               if (invInput)
                 invInput.value = pageOwnInv
