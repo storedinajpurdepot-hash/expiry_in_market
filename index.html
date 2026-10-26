@@ -11515,6 +11515,9 @@
               (row) => !row.classList.contains("row-committed"),
             );
             if (current) current.classList.add("row-committed");
+            $("typeProduct").value = "";
+            $("typeProduct").readOnly = false;
+            $("addMeta").textContent = "";
             const next = addRow();
             return next ? { row: next, empty: next.querySelector("input") } : null;
           }
