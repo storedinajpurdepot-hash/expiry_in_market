@@ -66,6 +66,10 @@
         display: flex;
         flex-direction: column;
       }
+      body:not(.page-ready) > .toolbar,
+      body:not(.page-ready) > main.page {
+        display: none !important;
+      }
       .sign > div {
         position: relative;
       }
@@ -4595,6 +4599,14 @@
             </select>
             <button
               type="button"
+              class="entry-blank-btn"
+              id="productListBack"
+              hidden
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
               id="entryPanelRefresh"
               class="panel-refresh"
               title="রিফ্রেশ করে নতুন করে প্রবেশ করুন"
@@ -6713,11 +6725,13 @@
           document
             .querySelectorAll(".product-list-group")
             .forEach((el) => el.classList.add("post-search-hidden"));
+          $("productListBack").hidden = true;
           dlg.classList.remove("wide-mode");
           showChemistSection();
           if (!dlg.open) dlg.showModal();
           setTimeout(() => $("de_ccode").focus(), 50);
         }
+        $("productListBack").onclick = returnToChemistSection;
         // OK চাপলে (খোঁজা চলছে বা না চলছে) বাটনে স্পিনার ঘোরে; খোঁজা শেষ হলে
         // নিজে থেকেই যাচাই হয়ে এগোয় — আবার চাপতে হয় না
         let okRunning = false;
@@ -8329,6 +8343,7 @@
             "two-pages",
             which === "saved" && savedPageCount > 1,
           );
+          document.body.classList.add("page-ready");
           window.scrollTo(0, 0);
           if (window.fitPagesToScreen) window.fitPagesToScreen();
         }
@@ -13025,6 +13040,7 @@
           dlg.classList.add("wide-mode");
           $("entryBlank").hidden = true;
           $("entryReport").hidden = true;
+          $("productListBack").hidden = false;
           setEntrySection("Product List & Summary");
           return true;
         }
